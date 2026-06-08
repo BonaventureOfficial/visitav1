@@ -6,11 +6,11 @@ export function BottomNav() {
   const { t } = useI18n();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  const items = [
+  const items: Array<{ to: "/" | "/upload" | "/profile"; label: string; icon: typeof Home; primary?: boolean }> = [
     { to: "/", label: t("home"), icon: Home },
     { to: "/upload", label: t("upload"), icon: Plus, primary: true },
     { to: "/profile", label: t("profile"), icon: User },
-  ] as const;
+  ];
 
   return (
     <nav
