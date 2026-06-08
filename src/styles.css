@@ -98,5 +98,6 @@
 }
 
 @utility gradient-brand {
-  background: linear-gradient(135deg, oklch(0.72 0.20 25), oklch(0.65 0.22 350));
+  background: linear-gradient(135deg, oklch(0.78 0.17 65), oklch(0.65 0.20 45));
 }
+
