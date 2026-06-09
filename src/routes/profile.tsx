@@ -1,10 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { LogOut, User as UserIcon } from "lucide-react";
+import { LogOut, User as UserIcon, Eye, Play, Film } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
+import { formatCount } from "@/lib/format";
+import { usePlayer } from "@/lib/player";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/profile")({
@@ -12,28 +14,33 @@ export const Route = createFileRoute("/profile")({
   component: ProfilePage,
 });
 
+interface MyVideo {
+  id: string; title: string; thumbnail_url: string | null; video_url: string | null;
+  views: number; likes: number; comments_count: number; channel_name: string | null; user_id: string | null;
+}
+
 function ProfilePage() {
   const { t } = useI18n();
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const { play } = usePlayer();
   const [channelName, setChannelName] = useState<string>("");
+  const [videos, setVideos] = useState<MyVideo[]>([]);
+  const [followerCount, setFollowerCount] = useState(0);
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate({ to: "/auth" });
-    }
+    if (!loading && !user) navigate({ to: "/auth" });
   }, [loading, user, navigate]);
 
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from("profiles")
-      .select("channel_name")
-      .eq("id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.channel_name) setChannelName(data.channel_name);
-      });
+    supabase.from("profiles").select("channel_name").eq("id", user.id).maybeSingle()
+      .then(({ data }) => { if (data?.channel_name) setChannelName(data.channel_name); });
+    supabase.from("videos").select("id,title,thumbnail_url,video_url,views,likes,comments_count,channel_name,user_id")
+      .eq("user_id", user.id).order("created_at", { ascending: false })
+      .then(({ data }) => setVideos((data ?? []) as MyVideo[]));
+    supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", user.id)
+      .then(({ count }) => setFollowerCount(count ?? 0));
   }, [user]);
 
   const signOut = async () => {
@@ -44,40 +51,76 @@ function ProfilePage() {
 
   if (!user) return null;
 
+  const totals = videos.reduce(
+    (a, v) => ({ views: a.views + v.views, likes: a.likes + v.likes, comments: a.comments + v.comments_count }),
+    { views: 0, likes: 0, comments: 0 },
+  );
+
   return (
     <AppLayout>
-      <section className="mx-auto max-w-2xl px-4 pt-8">
-        <div className="rounded-3xl bg-card border border-border p-6 flex items-center gap-4">
-          <div className="h-16 w-16 rounded-full gradient-brand flex items-center justify-center text-primary-foreground">
+      <section className="mx-auto max-w-3xl px-4 pt-6">
+        <div className="rounded-3xl bg-card border border-border p-5 flex items-center gap-4">
+          <div className="h-16 w-16 rounded-full gradient-brand flex items-center justify-center text-primary-foreground shadow-xl shadow-primary/30">
             <UserIcon className="h-7 w-7" />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="font-display text-xl font-bold truncate">
-              {channelName || t("myChannel")}
-            </h1>
+            <h1 className="font-display text-xl font-bold truncate">{channelName || t("myChannel")}</h1>
             <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+            <p className="text-xs text-primary mt-0.5">{formatCount(followerCount)} followers</p>
           </div>
-          <button
-            onClick={signOut}
-            className="rounded-full p-2.5 bg-secondary hover:bg-accent text-muted-foreground hover:text-foreground"
-            aria-label={t("signOut")}
-          >
+          <button onClick={signOut} className="rounded-full p-2.5 bg-secondary hover:bg-accent text-muted-foreground hover:text-foreground" aria-label={t("signOut")}>
             <LogOut className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="mt-6 grid grid-cols-3 gap-3 text-center">
+        <div className="mt-4 grid grid-cols-3 gap-3 text-center">
           {[
-            { label: t("views"), val: "0" },
-            { label: t("likes"), val: "0" },
-            { label: t("comments"), val: "0" },
+            { label: t("views"), val: formatCount(totals.views) },
+            { label: t("likes"), val: formatCount(totals.likes) },
+            { label: t("comments"), val: formatCount(totals.comments) },
           ].map((s) => (
             <div key={s.label} className="rounded-2xl bg-card border border-border p-4">
-              <p className="font-display text-2xl font-bold">{s.val}</p>
+              <p className="font-display text-2xl font-bold text-primary">{s.val}</p>
               <p className="text-[11px] text-muted-foreground mt-1">{s.label}</p>
             </div>
           ))}
         </div>
+
+        <h2 className="mt-8 mb-3 font-display text-lg font-bold flex items-center gap-2">
+          <Film className="h-4 w-4 text-primary" /> {t("library")}
+        </h2>
+
+        {videos.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+            {t("noVideosYet")}
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            {videos.map((v) => (
+              <button
+                key={v.id}
+                onClick={() => v.video_url && play({
+                  id: v.id, title: v.title, video_url: v.video_url,
+                  thumbnail_url: v.thumbnail_url, channel_name: v.channel_name, user_id: v.user_id,
+                })}
+                className="group relative aspect-square rounded-xl overflow-hidden bg-card border border-border/60 hover:border-primary/50 transition"
+              >
+                {v.thumbnail_url ? (
+                  <img src={v.thumbnail_url} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-secondary to-card" />
+                )}
+                <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-1.5 flex items-center justify-between text-[10px] font-semibold text-white">
+                  <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> {formatCount(v.views)}</span>
+                </span>
+                <span className="absolute bottom-1.5 right-1.5 h-7 w-7 rounded-full border border-primary bg-black/80 flex items-center justify-center text-primary opacity-0 group-hover:opacity-100 transition">
+                  <Play className="h-3.5 w-3.5 ml-0.5 fill-primary" />
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="h-6" />
       </section>
     </AppLayout>
   );
