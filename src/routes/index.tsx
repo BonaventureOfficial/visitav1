@@ -36,7 +36,6 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-  const { t } = useI18n();
   const [filter, setFilter] = useState<string>("all");
   const [videos, setVideos] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
