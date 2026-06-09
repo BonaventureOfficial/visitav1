@@ -1,17 +1,34 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { Eye, Heart, MessageCircle, Repeat2, Share2, Film } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
-import { VideoCard } from "@/components/VideoCard";
-import { mockVideos, type Category } from "@/lib/mock-videos";
 import { useI18n } from "@/lib/i18n";
+import { supabase } from "@/integrations/supabase/client";
+import { formatCount } from "@/lib/format";
+
+type Category = "emission" | "podcast" | "documentary";
+
+interface VideoRow {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string;
+  thumbnail_url: string | null;
+  video_url: string | null;
+  views: number;
+  likes: number;
+  comments_count: number;
+  reposts: number;
+  shares: number;
+  channel_name: string | null;
+  created_at: string;
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Visita — Shows, Podcasts & Documentaries" },
       { name: "description", content: "Stream the best shows, podcasts and documentaries on Visita." },
-      { property: "og:title", content: "Visita" },
-      { property: "og:description", content: "Shows, podcasts and documentaries — all in one place." },
     ],
   }),
   component: Home,
@@ -20,9 +37,24 @@ export const Route = createFileRoute("/")({
 function Home() {
   const { t } = useI18n();
   const [filter, setFilter] = useState<Category | "all">("all");
+  const [videos, setVideos] = useState<VideoRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("videos")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(60)
+      .then(({ data }) => {
+        setVideos((data ?? []) as VideoRow[]);
+        setLoading(false);
+      });
+  }, []);
+
   const list = useMemo(
-    () => (filter === "all" ? mockVideos : mockVideos.filter((v) => v.category === filter)),
-    [filter],
+    () => (filter === "all" ? videos : videos.filter((v) => v.category === filter)),
+    [filter, videos],
   );
 
   const tabs: Array<{ id: Category | "all"; label: string }> = [
@@ -35,20 +67,7 @@ function Home() {
   return (
     <AppLayout>
       <section className="mx-auto max-w-7xl px-4 pt-6">
-        <div className="rounded-3xl gradient-brand p-6 md:p-10 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.15),transparent_50%)]" />
-          <div className="relative max-w-xl">
-            <p className="uppercase tracking-[0.2em] text-xs text-primary-foreground/80">
-              {t("discover")}
-            </p>
-            <h1 className="mt-2 text-3xl md:text-5xl font-display font-bold text-primary-foreground">
-              {t("welcome")}
-            </h1>
-            <p className="mt-3 text-primary-foreground/90 text-sm md:text-base">{t("tagline")}</p>
-          </div>
-        </div>
-
-        <div className="mt-6 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -64,13 +83,107 @@ function Home() {
           ))}
         </div>
 
-        <h2 className="mt-6 text-lg font-display font-semibold">{t("trending")}</h2>
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {list.map((v) => (
-            <VideoCard key={v.id} v={v} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="aspect-video rounded-2xl bg-card animate-pulse" />
+            ))}
+          </div>
+        ) : list.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {list.map((v) => (
+              <VideoCard key={v.id} v={v} />
+            ))}
+          </div>
+        )}
       </section>
     </AppLayout>
+  );
+}
+
+function EmptyState() {
+  const { t } = useI18n();
+  return (
+    <div className="mt-16 text-center">
+      <div className="mx-auto h-16 w-16 rounded-2xl bg-card border border-border flex items-center justify-center">
+        <Film className="h-7 w-7 text-primary" />
+      </div>
+      <h2 className="mt-4 font-display text-xl font-bold">{t("welcome")}</h2>
+      <p className="mt-1 text-sm text-muted-foreground">{t("noVideosYet")}</p>
+      <Link
+        to="/upload"
+        className="inline-flex mt-6 rounded-xl gradient-brand text-primary-foreground font-semibold px-6 py-3 text-sm"
+      >
+        {t("uploadFirst")}
+      </Link>
+    </div>
+  );
+}
+
+function VideoCard({ v }: { v: VideoRow }) {
+  const [playing, setPlaying] = useState(false);
+  return (
+    <article className="group rounded-2xl overflow-hidden bg-card border border-border/60 hover:border-primary/40 transition-all">
+      <div className="relative aspect-video bg-black">
+        {playing && v.video_url ? (
+          <video
+            src={v.video_url}
+            controls
+            autoPlay
+            playsInline
+            preload="metadata"
+            className="h-full w-full object-contain bg-black"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => v.video_url && setPlaying(true)}
+            className="absolute inset-0 group/play"
+            aria-label="Play"
+          >
+            {v.thumbnail_url ? (
+              <img
+                src={v.thumbnail_url}
+                alt=""
+                loading="lazy"
+                className="h-full w-full object-cover group-hover/play:scale-105 transition-transform duration-500"
+              />
+            ) : (
+              <div className="h-full w-full bg-gradient-to-br from-secondary to-card" />
+            )}
+            <span className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover/play:bg-black/30 transition">
+              <span className="h-14 w-14 rounded-full gradient-brand flex items-center justify-center shadow-xl shadow-primary/40">
+                <svg viewBox="0 0 24 24" className="h-6 w-6 ml-1 fill-primary-foreground"><path d="M8 5v14l11-7z"/></svg>
+              </span>
+            </span>
+            <span className="absolute top-2 left-2 text-[10px] uppercase tracking-wider font-semibold bg-primary/90 text-primary-foreground px-2 py-0.5 rounded-full">
+              {v.category}
+            </span>
+          </button>
+        )}
+      </div>
+      <div className="p-3">
+        <h3 className="font-display font-semibold text-sm leading-snug line-clamp-2">{v.title}</h3>
+        <p className="mt-1 text-xs text-muted-foreground">{v.channel_name ?? ""}</p>
+        <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
+          <Stat icon={Eye} n={v.views} />
+          <Stat icon={Heart} n={v.likes} />
+          <Stat icon={MessageCircle} n={v.comments_count} />
+          <Stat icon={Repeat2} n={v.reposts} />
+          <Stat icon={Share2} n={v.shares} />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function Stat({ icon: Icon, n }: { icon: typeof Eye; n: number }) {
+  return (
+    <span className="flex items-center gap-1">
+      <Icon className="h-3.5 w-3.5" />
+      {formatCount(n)}
+    </span>
   );
 }
