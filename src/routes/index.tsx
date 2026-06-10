@@ -77,48 +77,6 @@ function Home() {
   );
 }
 
-function Featured({ v }: { v: VideoRow }) {
-  const { play } = usePlayer();
-  const { t } = useI18n();
-  const open = () => v.video_url && play({
-    id: v.id, title: v.title, video_url: v.video_url,
-    thumbnail_url: v.thumbnail_url, channel_name: v.channel_name, user_id: v.user_id,
-  });
-  return (
-    <article className="relative mt-4 rounded-3xl overflow-hidden bg-black border border-border/60 aspect-[4/3] sm:aspect-[16/9]">
-      {v.thumbnail_url ? (
-        <img src={v.thumbnail_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-card to-black" />
-      )}
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-      <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-primary/15 backdrop-blur-sm text-primary border border-primary/40 px-3 py-1 text-[11px] font-bold tracking-widest uppercase">
-        {t("featured")}
-      </span>
-      <div className="absolute left-0 right-0 bottom-0 p-5">
-        <h2 className="font-display text-2xl sm:text-3xl font-bold leading-tight max-w-[80%]">{v.title}</h2>
-        <div className="mt-2 flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full gradient-brand flex items-center justify-center text-primary-foreground text-xs font-bold">
-            {(v.channel_name ?? "V").slice(0, 1).toUpperCase()}
-          </div>
-          <span className="text-xs text-muted-foreground">by {v.channel_name ?? "Visita"}</span>
-        </div>
-        <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><Eye className="h-3.5 w-3.5" /> {formatCount(v.views)}</span>
-          <span className="flex items-center gap-1 text-primary/90"><Heart className="h-3.5 w-3.5 fill-current" /> {formatCount(v.likes)}</span>
-          <span className="flex items-center gap-1"><MessageCircle className="h-3.5 w-3.5" /> {formatCount(v.comments_count)}</span>
-        </div>
-      </div>
-      <button
-        onClick={open}
-        aria-label="Play"
-        className="absolute bottom-4 right-4 h-14 w-14 rounded-full border-2 border-primary bg-black/80 backdrop-blur flex items-center justify-center text-primary shadow-2xl shadow-primary/30 hover:scale-105 transition"
-      >
-        <Play className="h-6 w-6 ml-0.5 fill-primary" />
-      </button>
-    </article>
-  );
-}
 
 function VideoCard({ v }: { v: VideoRow }) {
   const { play } = usePlayer();
