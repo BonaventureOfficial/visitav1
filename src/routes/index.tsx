@@ -45,12 +45,8 @@ function Home() {
       .then(({ data }) => { setVideos((data ?? []) as VideoRow[]); setLoading(false); });
   }, []);
 
-  const featured = filter === "all" ? videos[0] : undefined;
   const list = useMemo(
-    () => {
-      const base = filter === "all" ? videos.slice(1) : videos.filter((v) => v.category === filter);
-      return base;
-    },
+    () => (filter === "all" ? videos : videos.filter((v) => v.category === filter)),
     [filter, videos],
   );
 
@@ -62,18 +58,16 @@ function Home() {
           onSelect={(id) => setFilter(filter === id ? "all" : id)}
         />
 
-        {featured && <Featured v={featured} />}
-
         {loading ? (
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[0, 1, 2].map((i) => (
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {[0, 1, 2, 3].map((i) => (
               <div key={i} className="aspect-video rounded-2xl bg-card animate-pulse" />
             ))}
           </div>
         ) : list.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {list.map((v) => <VideoCard key={v.id} v={v} />)}
           </div>
         )}
