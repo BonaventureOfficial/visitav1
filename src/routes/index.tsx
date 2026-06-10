@@ -126,7 +126,7 @@ function VideoCard({ v }: { v: VideoRow }) {
 
   return (
     <article className="group rounded-2xl overflow-hidden bg-card border border-border/60 hover:border-primary/50 transition-all">
-      <div ref={hostRef} className="relative aspect-video bg-black">
+      <div ref={setHostEl} className="relative aspect-video bg-black">
         {v.thumbnail_url ? (
           <img src={v.thumbnail_url} alt="" loading="lazy" className="h-full w-full object-cover" />
         ) : (
