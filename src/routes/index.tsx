@@ -1,12 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { Eye, Play, Film } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Eye, Play, Film, Heart, MessageCircle, Share2, Repeat2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { CategoryMarquee } from "@/components/CategoryMarquee";
 import { useI18n } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCount } from "@/lib/format";
-import { usePlayer } from "@/lib/player";
+import { usePlayer, useVideoHost } from "@/lib/player";
+import { toast } from "sonner";
 
 interface VideoRow {
   id: string;
