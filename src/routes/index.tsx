@@ -45,12 +45,14 @@ function Home() {
       .then(({ data }) => { setVideos((data ?? []) as VideoRow[]); setLoading(false); });
   }, []);
 
+  const featured = filter === "all" ? videos[0] : undefined;
   const list = useMemo(
-    () => (filter === "all" ? videos : videos.filter((v) => v.category === filter)),
+    () => {
+      const base = filter === "all" ? videos.slice(1) : videos.filter((v) => v.category === filter);
+      return base;
+    },
     [filter, videos],
   );
-
-  const featured = videos[0];
 
   return (
     <AppLayout>
