@@ -1,12 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Play, Film } from "lucide-react";
+import { Eye, Play, Film, Heart, MessageCircle, Share2, Repeat2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { CategoryMarquee } from "@/components/CategoryMarquee";
 import { useI18n } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCount } from "@/lib/format";
-import { usePlayer } from "@/lib/player";
+import { usePlayer, useVideoHost } from "@/lib/player";
+import { toast } from "sonner";
 
 interface VideoRow {
   id: string;
@@ -79,32 +81,74 @@ function Home() {
 
 
 function VideoCard({ v }: { v: VideoRow }) {
-  const { play } = usePlayer();
+  const { play, current } = usePlayer();
+  const { user } = useAuth();
+  const [hostEl, setHostEl] = useState<HTMLDivElement | null>(null);
+  const isActive = current?.id === v.id;
+  useVideoHost(v.id, isActive ? hostEl : null);
+
+  const [liked, setLiked] = useState(false);
+  const [likes, setLikes] = useState(v.likes);
+
+  useEffect(() => {
+    if (!user) { setLiked(false); return; }
+    (supabase as any).from("video_likes").select("id").eq("user_id", user.id).eq("video_id", v.id).maybeSingle()
+      .then(({ data }: any) => setLiked(!!data));
+  }, [user?.id, v.id]);
+
   const open = () => v.video_url && play({
     id: v.id, title: v.title, video_url: v.video_url,
     thumbnail_url: v.thumbnail_url, channel_name: v.channel_name, user_id: v.user_id,
   });
+
+  const toggleLike = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) { toast.error("Sign in to like"); return; }
+    if (liked) {
+      setLiked(false); setLikes((c) => Math.max(0, c - 1));
+      const { error } = await (supabase as any).from("video_likes").delete().eq("user_id", user.id).eq("video_id", v.id);
+      if (error) { setLiked(true); setLikes((c) => c + 1); }
+    } else {
+      setLiked(true); setLikes((c) => c + 1);
+      const { error } = await (supabase as any).from("video_likes").insert({ user_id: user.id, video_id: v.id });
+      if (error && (error as any).code !== "23505") { setLiked(false); setLikes((c) => Math.max(0, c - 1)); }
+    }
+  };
+
+  const share = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = typeof window !== "undefined" ? window.location.origin + "/?v=" + v.id : "";
+    try {
+      if (navigator.share) await navigator.share({ title: v.title, url });
+      else { await navigator.clipboard.writeText(url); toast.success("Link copied"); }
+    } catch {}
+  };
+
   return (
     <article className="group rounded-2xl overflow-hidden bg-card border border-border/60 hover:border-primary/50 transition-all">
-      <div className="relative aspect-video bg-black">
+      <div ref={setHostEl} className="relative aspect-video bg-black">
         {v.thumbnail_url ? (
           <img src={v.thumbnail_url} alt="" loading="lazy" className="h-full w-full object-cover" />
         ) : (
           <div className="h-full w-full bg-gradient-to-br from-secondary to-card" />
         )}
-        <span className="absolute top-2 left-2 text-[10px] uppercase tracking-wider font-bold bg-black/70 backdrop-blur text-primary border border-primary/40 px-2 py-0.5 rounded-full">
-          {v.category}
-        </span>
-        <span className="absolute top-2 right-2 text-[10px] font-semibold bg-black/70 backdrop-blur text-white px-2 py-0.5 rounded-full flex items-center gap-1">
-          <Eye className="h-3 w-3" /> {formatCount(v.views)}
-        </span>
-        <button
-          onClick={open}
-          aria-label="Play"
-          className="absolute bottom-2 right-2 h-11 w-11 rounded-full border-2 border-primary bg-black/85 flex items-center justify-center text-primary shadow-xl shadow-primary/30 hover:scale-110 transition"
-        >
-          <Play className="h-5 w-5 ml-0.5 fill-primary" />
-        </button>
+        {!isActive && (
+          <>
+            <span className="absolute top-2 left-2 text-[10px] uppercase tracking-wider font-bold bg-black/70 backdrop-blur text-primary border border-primary/40 px-2 py-0.5 rounded-full">
+              {v.category}
+            </span>
+            <span className="absolute top-2 right-2 text-[10px] font-semibold bg-black/70 backdrop-blur text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+              <Eye className="h-3 w-3" /> {formatCount(v.views)}
+            </span>
+            <button
+              onClick={open}
+              aria-label="Play"
+              className="absolute bottom-2 right-2 h-11 w-11 rounded-full border-2 border-primary bg-black/85 flex items-center justify-center text-primary shadow-xl shadow-primary/30 hover:scale-110 transition"
+            >
+              <Play className="h-5 w-5 ml-0.5 fill-primary" />
+            </button>
+          </>
+        )}
       </div>
       <div className="p-3">
         <h3 className="font-display font-semibold text-sm leading-snug line-clamp-2">{v.title}</h3>
@@ -112,7 +156,21 @@ function VideoCard({ v }: { v: VideoRow }) {
           <div className="h-6 w-6 rounded-full gradient-brand flex items-center justify-center text-primary-foreground text-[10px] font-bold">
             {(v.channel_name ?? "V").slice(0, 1).toUpperCase()}
           </div>
-          <p className="text-xs text-muted-foreground truncate">{v.channel_name ?? ""}</p>
+          <p className="text-xs text-muted-foreground truncate flex-1">{v.channel_name ?? ""}</p>
+        </div>
+        <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+          <button onClick={toggleLike} className={`flex items-center gap-1 transition ${liked ? "text-primary" : "hover:text-primary"}`} aria-label="Like">
+            <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} /> {formatCount(likes)}
+          </button>
+          <button onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 hover:text-primary transition" aria-label="Comments">
+            <MessageCircle className="h-4 w-4" /> {formatCount(v.comments_count)}
+          </button>
+          <button onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 hover:text-primary transition" aria-label="Repost">
+            <Repeat2 className="h-4 w-4" /> {formatCount(v.reposts)}
+          </button>
+          <button onClick={share} className="flex items-center gap-1 hover:text-primary transition" aria-label="Share">
+            <Share2 className="h-4 w-4" /> {formatCount(v.shares)}
+          </button>
         </div>
       </div>
     </article>
