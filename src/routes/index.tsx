@@ -83,9 +83,9 @@ function Home() {
 function VideoCard({ v }: { v: VideoRow }) {
   const { play, current } = usePlayer();
   const { user } = useAuth();
-  const hostRef = useRef<HTMLDivElement | null>(null);
+  const [hostEl, setHostEl] = useState<HTMLDivElement | null>(null);
   const isActive = current?.id === v.id;
-  useVideoHost(v.id, isActive ? hostRef.current : null);
+  useVideoHost(v.id, isActive ? hostEl : null);
 
   const [liked, setLiked] = useState(false);
   const [likes, setLikes] = useState(v.likes);
