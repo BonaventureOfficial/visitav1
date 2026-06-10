@@ -176,6 +176,8 @@ function VideoCard({ v }: { v: VideoRow }) {
     </article>
   );
 }
+
+function EmptyState() {
   const { t } = useI18n();
   return (
     <div className="mt-16 text-center">
