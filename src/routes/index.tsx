@@ -52,6 +52,8 @@ function Home() {
     [filter, videos],
   );
 
+  const { current } = usePlayer();
+
   return (
     <AppLayout>
       <section className="mx-auto max-w-7xl px-3 pt-3">
@@ -59,6 +61,8 @@ function Home() {
           active={filter}
           onSelect={(id) => setFilter(filter === id ? "all" : id)}
         />
+
+        {current && <NowPlayingPinned />}
 
         {loading ? (
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -79,13 +83,26 @@ function Home() {
   );
 }
 
+function NowPlayingPinned() {
+  const { current } = usePlayer();
+  const [el, setEl] = useState<HTMLDivElement | null>(null);
+  useVideoHost(current?.id, el);
+  return (
+    <div className="mt-4 mx-auto w-full max-w-3xl">
+      <div
+        ref={setEl}
+        className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black border border-primary/50 shadow-2xl shadow-primary/20"
+      />
+      <p className="mt-2 text-sm font-semibold truncate">{current?.title}</p>
+    </div>
+  );
+}
+
 
 function VideoCard({ v }: { v: VideoRow }) {
   const { play, current } = usePlayer();
   const { user } = useAuth();
-  const [hostEl, setHostEl] = useState<HTMLDivElement | null>(null);
   const isActive = current?.id === v.id;
-  useVideoHost(v.id, isActive ? hostEl : null);
 
   const [liked, setLiked] = useState(false);
   const [likes, setLikes] = useState(v.likes);
@@ -125,30 +142,26 @@ function VideoCard({ v }: { v: VideoRow }) {
   };
 
   return (
-    <article className="group rounded-2xl overflow-hidden bg-card border border-border/60 hover:border-primary/50 transition-all">
-      <div ref={setHostEl} className="relative aspect-video bg-black">
+    <article className={`group rounded-2xl overflow-hidden bg-card border transition-all ${isActive ? "border-primary/70 ring-2 ring-primary/30" : "border-border/60 hover:border-primary/50"}`}>
+      <div className="relative aspect-video bg-black">
         {v.thumbnail_url ? (
           <img src={v.thumbnail_url} alt="" loading="lazy" className="h-full w-full object-cover" />
         ) : (
           <div className="h-full w-full bg-gradient-to-br from-secondary to-card" />
         )}
-        {!isActive && (
-          <>
-            <span className="absolute top-2 left-2 text-[10px] uppercase tracking-wider font-bold bg-black/70 backdrop-blur text-primary border border-primary/40 px-2 py-0.5 rounded-full">
-              {v.category}
-            </span>
-            <span className="absolute top-2 right-2 text-[10px] font-semibold bg-black/70 backdrop-blur text-white px-2 py-0.5 rounded-full flex items-center gap-1">
-              <Eye className="h-3 w-3" /> {formatCount(v.views)}
-            </span>
-            <button
-              onClick={open}
-              aria-label="Play"
-              className="absolute bottom-2 right-2 h-11 w-11 rounded-full border-2 border-primary bg-black/85 flex items-center justify-center text-primary shadow-xl shadow-primary/30 hover:scale-110 transition"
-            >
-              <Play className="h-5 w-5 ml-0.5 fill-primary" />
-            </button>
-          </>
-        )}
+        <span className="absolute top-2 left-2 text-[10px] uppercase tracking-wider font-bold bg-black/70 backdrop-blur text-primary border border-primary/40 px-2 py-0.5 rounded-full">
+          {v.category}
+        </span>
+        <span className="absolute top-2 right-2 text-[10px] font-semibold bg-black/70 backdrop-blur text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+          <Eye className="h-3 w-3" /> {formatCount(v.views)}
+        </span>
+        <button
+          onClick={open}
+          aria-label="Play"
+          className="absolute bottom-2 right-2 h-11 w-11 rounded-full border-2 border-primary bg-black/85 flex items-center justify-center text-primary shadow-xl shadow-primary/30 hover:scale-110 transition"
+        >
+          {isActive ? <span className="text-[10px] font-bold">NOW</span> : <Play className="h-5 w-5 ml-0.5 fill-primary" />}
+        </button>
       </div>
       <div className="p-3">
         <h3 className="font-display font-semibold text-sm leading-snug line-clamp-2">{v.title}</h3>
