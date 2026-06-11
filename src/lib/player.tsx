@@ -13,6 +13,7 @@ export interface PlayingVideo {
   thumbnail_url?: string | null;
   channel_name?: string | null;
   user_id?: string | null;
+  views?: number | null;
 }
 
 interface PlayerCtx {
