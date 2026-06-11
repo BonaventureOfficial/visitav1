@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Play, Film, Heart, MessageCircle, Share2, Repeat2 } from "lucide-react";
+import { Eye, Play, Film, Heart, MessageCircle, Share2, Send } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { CategoryMarquee } from "@/components/CategoryMarquee";
 import { useI18n } from "@/lib/i18n";
@@ -106,6 +106,9 @@ function VideoCard({ v }: { v: VideoRow }) {
 
   const [liked, setLiked] = useState(false);
   const [likes, setLikes] = useState(v.likes);
+  const [shares, setShares] = useState(v.shares);
+  const [commentsCount, setCommentsCount] = useState(v.comments_count);
+  const [commentsOpen, setCommentsOpen] = useState(false);
 
   useEffect(() => {
     if (!user) { setLiked(false); return; }
@@ -138,6 +141,13 @@ function VideoCard({ v }: { v: VideoRow }) {
     try {
       if (navigator.share) await navigator.share({ title: v.title, url });
       else { await navigator.clipboard.writeText(url); toast.success("Link copied"); }
+      if (user) {
+        setShares((c) => c + 1);
+        const { error } = await (supabase as any).from("video_shares").insert({ user_id: user.id, video_id: v.id });
+        if (error) setShares((c) => Math.max(0, c - 1));
+      } else {
+        toast.error("Sign in to count your share");
+      }
     } catch {}
   };
 
@@ -175,18 +185,94 @@ function VideoCard({ v }: { v: VideoRow }) {
           <button onClick={toggleLike} className={`flex items-center gap-1 transition ${liked ? "text-primary" : "hover:text-primary"}`} aria-label="Like">
             <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} /> {formatCount(likes)}
           </button>
-          <button onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 hover:text-primary transition" aria-label="Comments">
-            <MessageCircle className="h-4 w-4" /> {formatCount(v.comments_count)}
-          </button>
-          <button onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 hover:text-primary transition" aria-label="Repost">
-            <Repeat2 className="h-4 w-4" /> {formatCount(v.reposts)}
+          <button onClick={(e) => { e.stopPropagation(); setCommentsOpen((open) => !open); }} className={`flex items-center gap-1 transition ${commentsOpen ? "text-primary" : "hover:text-primary"}`} aria-label="Comments">
+            <MessageCircle className="h-4 w-4" /> {formatCount(commentsCount)}
           </button>
           <button onClick={share} className="flex items-center gap-1 hover:text-primary transition" aria-label="Share">
-            <Share2 className="h-4 w-4" /> {formatCount(v.shares)}
+            <Share2 className="h-4 w-4" /> {formatCount(shares)}
           </button>
         </div>
+        {commentsOpen && (
+          <CommentPanel videoId={v.id} onAdded={() => setCommentsCount((c) => c + 1)} />
+        )}
       </div>
     </article>
+  );
+}
+
+interface CommentRow {
+  id: string;
+  user_id: string;
+  body: string;
+  created_at: string;
+  author?: string;
+}
+
+function CommentPanel({ videoId, onAdded }: { videoId: string; onAdded: () => void }) {
+  const { user } = useAuth();
+  const [comments, setComments] = useState<CommentRow[]>([]);
+  const [body, setBody] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("video_comments")
+        .select("id,user_id,body,created_at")
+        .eq("video_id", videoId)
+        .order("created_at", { ascending: false })
+        .limit(3);
+      if (!active) return;
+      const rows = (data ?? []) as CommentRow[];
+      const ids = Array.from(new Set(rows.map((c) => c.user_id)));
+      if (ids.length) {
+        const { data: profiles } = await supabase.from("profiles").select("id,channel_name").in("id", ids);
+        const names = new Map((profiles ?? []).map((p) => [p.id, p.channel_name]));
+        if (active) setComments(rows.map((c) => ({ ...c, author: names.get(c.user_id) ?? "Visita" })));
+      } else setComments(rows);
+    })();
+    return () => { active = false; };
+  }, [videoId]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const clean = body.trim();
+    if (!user) { toast.error("Sign in to comment"); return; }
+    if (!clean) return;
+    setBusy(true);
+    const optimistic: CommentRow = { id: crypto.randomUUID(), user_id: user.id, body: clean, created_at: new Date().toISOString(), author: "You" };
+    setComments((rows) => [optimistic, ...rows].slice(0, 3));
+    setBody("");
+    onAdded();
+    const { error } = await (supabase as any).from("video_comments").insert({ user_id: user.id, video_id: videoId, body: clean });
+    if (error) { toast.error(error.message); setComments((rows) => rows.filter((c) => c.id !== optimistic.id)); }
+    setBusy(false);
+  };
+
+  return (
+    <div className="mt-3 border-t border-border/60 pt-3" onClick={(e) => e.stopPropagation()}>
+      <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
+        {comments.map((comment) => (
+          <p key={comment.id} className="text-xs leading-snug text-muted-foreground">
+            <span className="font-semibold text-foreground">{comment.author ?? "Visita"}</span> {comment.body}
+          </p>
+        ))}
+      </div>
+      <form onSubmit={submit} className="mt-3 flex items-center gap-2">
+        <input
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          maxLength={500}
+          placeholder="Ajouter un commentaire"
+          className="min-w-0 flex-1 rounded-full bg-secondary border border-border px-3 py-2 text-xs outline-none focus:border-primary"
+        />
+        <button disabled={busy || !body.trim()} className="h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-50" aria-label="Send comment">
+          <Send className="h-4 w-4" />
+        </button>
+      </form>
+    </div>
   );
 }
 
