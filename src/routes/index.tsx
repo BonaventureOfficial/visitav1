@@ -85,15 +85,12 @@ function Home() {
 
 function NowPlayingPinned() {
   const { current } = usePlayer();
-  const ref = useRef<HTMLDivElement | null>(null);
-  useVideoHost(current?.id, ref.current);
-  // Re-register when ref attaches
-  const [, setMounted] = useState(0);
-  useEffect(() => { setMounted((n) => n + 1); }, []);
+  const [el, setEl] = useState<HTMLDivElement | null>(null);
+  useVideoHost(current?.id, el);
   return (
     <div className="mt-4">
       <div
-        ref={(el) => { ref.current = el; setMounted((n) => n + 1); }}
+        ref={setEl}
         className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black border border-primary/50 shadow-2xl shadow-primary/20"
       />
       <p className="mt-2 text-sm font-semibold truncate">{current?.title}</p>
