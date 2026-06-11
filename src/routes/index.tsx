@@ -52,6 +52,8 @@ function Home() {
     [filter, videos],
   );
 
+  const { current } = usePlayer();
+
   return (
     <AppLayout>
       <section className="mx-auto max-w-7xl px-3 pt-3">
@@ -59,6 +61,8 @@ function Home() {
           active={filter}
           onSelect={(id) => setFilter(filter === id ? "all" : id)}
         />
+
+        {current && <NowPlayingPinned />}
 
         {loading ? (
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -76,6 +80,24 @@ function Home() {
         <div className="h-4" />
       </section>
     </AppLayout>
+  );
+}
+
+function NowPlayingPinned() {
+  const { current } = usePlayer();
+  const ref = useRef<HTMLDivElement | null>(null);
+  useVideoHost(current?.id, ref.current);
+  // Re-register when ref attaches
+  const [, setMounted] = useState(0);
+  useEffect(() => { setMounted((n) => n + 1); }, []);
+  return (
+    <div className="mt-4">
+      <div
+        ref={(el) => { ref.current = el; setMounted((n) => n + 1); }}
+        className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black border border-primary/50 shadow-2xl shadow-primary/20"
+      />
+      <p className="mt-2 text-sm font-semibold truncate">{current?.title}</p>
+    </div>
   );
 }
 
