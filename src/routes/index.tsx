@@ -93,7 +93,12 @@ function NowPlayingPinned() {
         ref={setEl}
         className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black border border-primary/50 shadow-2xl shadow-primary/20"
       />
-      <p className="mt-2 text-sm font-semibold truncate">{current?.title}</p>
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold truncate">{current?.title}</p>
+        <span className="shrink-0 text-xs text-muted-foreground flex items-center gap-1">
+          <Eye className="h-3.5 w-3.5" /> {formatCount(current?.views ?? 0)} views
+        </span>
+      </div>
     </div>
   );
 }
@@ -118,7 +123,7 @@ function VideoCard({ v }: { v: VideoRow }) {
 
   const open = () => v.video_url && play({
     id: v.id, title: v.title, video_url: v.video_url,
-    thumbnail_url: v.thumbnail_url, channel_name: v.channel_name, user_id: v.user_id,
+    thumbnail_url: v.thumbnail_url, channel_name: v.channel_name, user_id: v.user_id, views: v.views,
   });
 
   const toggleLike = async (e: React.MouseEvent) => {
