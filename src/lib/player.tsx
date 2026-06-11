@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
 import { Link } from "@tanstack/react-router";
 import { X, Play, Pause, Maximize2, Minimize2, UserPlus, Check, Heart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -77,17 +76,24 @@ function PersistentPlayer({ hostEl }: { hostEl: HTMLElement | null }) {
   const { user } = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [paused, setPaused] = useState(false);
+  const [hostRect, setHostRect] = useState<DOMRectReadOnly | null>(null);
 
   // is host visible in viewport?
   const [hostVisible, setHostVisible] = useState(false);
   useEffect(() => {
-    if (!hostEl) { setHostVisible(false); return; }
+    if (!hostEl) { setHostVisible(false); setHostRect(null); return; }
+    const updateRect = () => setHostRect(hostEl.getBoundingClientRect());
+    updateRect();
     const io = new IntersectionObserver(
-      ([e]) => setHostVisible(e.isIntersecting && e.intersectionRatio > 0.3),
+      ([e]) => { setHostVisible(e.isIntersecting && e.intersectionRatio > 0.3); setHostRect(e.boundingClientRect); },
       { threshold: [0, 0.3, 0.6, 1] },
     );
+    const ro = new ResizeObserver(updateRect);
     io.observe(hostEl);
-    return () => io.disconnect();
+    ro.observe(hostEl);
+    window.addEventListener("scroll", updateRect, { passive: true });
+    window.addEventListener("resize", updateRect);
+    return () => { io.disconnect(); ro.disconnect(); window.removeEventListener("scroll", updateRect); window.removeEventListener("resize", updateRect); };
   }, [hostEl]);
 
   // mini drag/size
@@ -135,7 +141,7 @@ function PersistentPlayer({ hostEl }: { hostEl: HTMLElement | null }) {
 
   if (!current) return null;
 
-  const inline = !!hostEl && hostVisible && !expanded;
+  const inline = !!hostEl && !!hostRect && hostVisible && !expanded;
 
   const togglePlay = () => {
     const v = videoRef.current; if (!v) return;
@@ -193,14 +199,14 @@ function PersistentPlayer({ hostEl }: { hostEl: HTMLElement | null }) {
       onTouchEnd={onTouchEnd}
       className={
         inline
-          ? "absolute inset-0 bg-black overflow-hidden"
+          ? "fixed z-[55] bg-black overflow-hidden rounded-2xl"
           : expanded
             ? "fixed inset-0 z-[60] bg-black flex flex-col select-none"
             : "fixed z-[60] bg-black rounded-2xl overflow-hidden shadow-2xl shadow-black/80 border border-primary/40 cursor-move touch-none select-none"
       }
       style={
         inline
-          ? undefined
+          ? { left: hostRect.left, top: hostRect.top, width: hostRect.width, height: hostRect.height }
           : expanded
             ? undefined
             : { left: pos.x, top: pos.y, width: size.w, height: size.h + 36 }
@@ -301,7 +307,6 @@ function PersistentPlayer({ hostEl }: { hostEl: HTMLElement | null }) {
     </div>
   );
 
-  if (inline && hostEl) return createPortal(playerNode, hostEl);
   return playerNode;
 }
 
