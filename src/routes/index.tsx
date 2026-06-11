@@ -88,7 +88,7 @@ function NowPlayingPinned() {
   const [el, setEl] = useState<HTMLDivElement | null>(null);
   useVideoHost(current?.id, el);
   return (
-    <div className="mt-4">
+    <div className="mt-4 mx-auto w-full max-w-3xl">
       <div
         ref={setEl}
         className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black border border-primary/50 shadow-2xl shadow-primary/20"
