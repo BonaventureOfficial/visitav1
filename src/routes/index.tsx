@@ -195,10 +195,11 @@ function VideoCard({ v, initialLiked }: { v: VideoRow; initialLiked: boolean }) 
       <div className="p-3">
         <h3 className="font-display font-semibold text-sm leading-snug line-clamp-2">{v.title}</h3>
         <div className="mt-2 flex items-center gap-2">
-          <div className="h-6 w-6 rounded-full gradient-brand flex items-center justify-center text-primary-foreground text-[10px] font-bold">
+          <div className="h-6 w-6 rounded-full gradient-brand flex items-center justify-center text-primary-foreground text-[10px] font-bold shrink-0">
             {(v.channel_name ?? "V").slice(0, 1).toUpperCase()}
           </div>
           <p className="text-xs text-muted-foreground truncate flex-1">{v.channel_name ?? ""}</p>
+          <FollowButton ownerId={v.user_id} size="sm" showCount={false} />
         </div>
         <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
           <button onClick={toggleLike} className={`flex items-center gap-1 transition ${liked ? "text-primary" : "hover:text-primary"}`} aria-label="Like">
