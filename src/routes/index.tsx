@@ -39,14 +39,26 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
+  const { user } = useAuth();
   const [filter, setFilter] = useState<string>("all");
   const [videos, setVideos] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    supabase.from("videos").select("*").order("created_at", { ascending: false }).limit(60)
+    supabase.from("videos")
+      .select("id,title,description,category,thumbnail_url,video_url,views,likes,comments_count,reposts,shares,channel_name,user_id,created_at")
+      .order("created_at", { ascending: false }).limit(60)
       .then(({ data }) => { setVideos((data ?? []) as VideoRow[]); setLoading(false); });
   }, []);
+
+  // Batch-fetch which videos current user has liked (single query instead of N)
+  useEffect(() => {
+    if (!user || videos.length === 0) { setLikedIds(new Set()); return; }
+    const ids = videos.map((v) => v.id);
+    (supabase as any).from("video_likes").select("video_id").eq("user_id", user.id).in("video_id", ids)
+      .then(({ data }: any) => setLikedIds(new Set((data ?? []).map((r: any) => r.video_id))));
+  }, [user?.id, videos]);
 
   const list = useMemo(
     () => (filter === "all" ? videos : videos.filter((v) => v.category === filter)),
