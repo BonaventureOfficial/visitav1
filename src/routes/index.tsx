@@ -174,7 +174,7 @@ function VideoCard({ v, initialLiked }: { v: VideoRow; initialLiked: boolean }) 
     <article className={`group rounded-2xl overflow-hidden bg-card border transition-all ${isActive ? "border-primary/70 ring-2 ring-primary/30" : "border-border/60 hover:border-primary/50"}`}>
       <div className="relative aspect-video bg-black">
         {v.thumbnail_url ? (
-          <img src={v.thumbnail_url} alt="" loading="lazy" className="h-full w-full object-cover" />
+          <img src={v.thumbnail_url} alt="" loading="lazy" decoding="async" width={640} height={360} className="h-full w-full object-cover" />
         ) : (
           <div className="h-full w-full bg-gradient-to-br from-secondary to-card" />
         )}
