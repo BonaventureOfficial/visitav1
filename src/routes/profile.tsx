@@ -25,6 +25,9 @@ function ProfilePage() {
   const navigate = useNavigate();
   const { play } = usePlayer();
   const [channelName, setChannelName] = useState<string>("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [videos, setVideos] = useState<MyVideo[]>([]);
   const [followerCount, setFollowerCount] = useState(0);
 
@@ -34,14 +37,46 @@ function ProfilePage() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("channel_name").eq("id", user.id).maybeSingle()
-      .then(({ data }) => { if (data?.channel_name) setChannelName(data.channel_name); });
+    supabase.from("profiles").select("channel_name,avatar_url").eq("id", user.id).maybeSingle()
+      .then(({ data }) => {
+        if (data?.channel_name) setChannelName(data.channel_name);
+        if ((data as any)?.avatar_url) setAvatarUrl((data as any).avatar_url);
+      });
     supabase.from("videos").select("id,title,thumbnail_url,video_url,views,likes,comments_count,channel_name,user_id")
       .eq("user_id", user.id).order("created_at", { ascending: false })
       .then(({ data }) => setVideos((data ?? []) as MyVideo[]));
     supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", user.id)
       .then(({ count }) => setFollowerCount(count ?? 0));
   }, [user]);
+
+  const onPickAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !user) return;
+    if (!file.type.startsWith("image/")) { toast.error("Image only"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Max 5MB"); return; }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${user.id}/avatar-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
+        cacheControl: "3600", upsert: true, contentType: file.type,
+      });
+      if (upErr) throw upErr;
+      const { data: signed, error: sErr } = await supabase.storage.from("avatars")
+        .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+      if (sErr || !signed) throw sErr ?? new Error("URL");
+      const url = signed.signedUrl;
+      const { error: pErr } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", user.id);
+      if (pErr) throw pErr;
+      setAvatarUrl(url);
+      toast.success("✓");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -60,9 +95,28 @@ function ProfilePage() {
     <AppLayout>
       <section className="mx-auto max-w-3xl px-4 pt-6">
         <div className="rounded-3xl bg-card border border-border p-5 flex items-center gap-4">
-          <div className="h-16 w-16 rounded-full gradient-brand flex items-center justify-center text-primary-foreground shadow-xl shadow-primary/30">
-            <UserIcon className="h-7 w-7" />
-          </div>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="relative h-16 w-16 rounded-full overflow-hidden gradient-brand flex items-center justify-center text-primary-foreground shadow-xl shadow-primary/30 group shrink-0"
+            aria-label="Change avatar"
+          >
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            ) : (
+              <UserIcon className="h-7 w-7" />
+            )}
+            <span className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+              {uploading ? <Loader2 className="h-5 w-5 animate-spin text-white" /> : <Camera className="h-5 w-5 text-white" />}
+            </span>
+            {uploading && (
+              <span className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-white" />
+              </span>
+            )}
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
           <div className="flex-1 min-w-0">
             <h1 className="font-display text-xl font-bold truncate">{channelName || t("myChannel")}</h1>
             <p className="text-xs text-muted-foreground truncate">{user.email}</p>
