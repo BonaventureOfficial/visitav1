@@ -122,22 +122,18 @@ function NowPlayingPinned() {
 }
 
 
-function VideoCard({ v }: { v: VideoRow }) {
+function VideoCard({ v, initialLiked }: { v: VideoRow; initialLiked: boolean }) {
   const { play, current } = usePlayer();
   const { user } = useAuth();
   const isActive = current?.id === v.id;
 
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(initialLiked);
   const [likes, setLikes] = useState(v.likes);
   const [shares, setShares] = useState(v.shares);
   const [commentsCount, setCommentsCount] = useState(v.comments_count);
   const [commentsOpen, setCommentsOpen] = useState(false);
 
-  useEffect(() => {
-    if (!user) { setLiked(false); return; }
-    (supabase as any).from("video_likes").select("id").eq("user_id", user.id).eq("video_id", v.id).maybeSingle()
-      .then(({ data }: any) => setLiked(!!data));
-  }, [user?.id, v.id]);
+  useEffect(() => { setLiked(initialLiked); }, [initialLiked]);
 
   const open = () => v.video_url && play({
     id: v.id, title: v.title, video_url: v.video_url,
