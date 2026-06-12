@@ -107,10 +107,15 @@ function NowPlayingPinned() {
         className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black border border-primary/50 shadow-2xl shadow-primary/20"
       />
       <div className="mt-2 flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold truncate">{current?.title}</p>
-        <span className="shrink-0 text-xs text-muted-foreground flex items-center gap-1">
-          <Eye className="h-3.5 w-3.5" /> {formatCount(current?.views ?? 0)} views
-        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold truncate">{current?.title}</p>
+          <p className="text-[11px] text-muted-foreground truncate flex items-center gap-2">
+            <span>{current?.channel_name ?? "Visita"}</span>
+            <span className="opacity-60">·</span>
+            <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> {formatCount(current?.views ?? 0)}</span>
+          </p>
+        </div>
+        <FollowButton ownerId={current?.user_id ?? null} size="md" showCount={false} />
       </div>
     </div>
   );
