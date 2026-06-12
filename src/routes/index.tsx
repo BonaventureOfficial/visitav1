@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Eye, Play, Film, Heart, MessageCircle, Share2, Send } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { CategoryMarquee } from "@/components/CategoryMarquee";
+import { FollowButton } from "@/components/FollowButton";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,14 +39,26 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
+  const { user } = useAuth();
   const [filter, setFilter] = useState<string>("all");
   const [videos, setVideos] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    supabase.from("videos").select("*").order("created_at", { ascending: false }).limit(60)
+    supabase.from("videos")
+      .select("id,title,description,category,thumbnail_url,video_url,views,likes,comments_count,reposts,shares,channel_name,user_id,created_at")
+      .order("created_at", { ascending: false }).limit(60)
       .then(({ data }) => { setVideos((data ?? []) as VideoRow[]); setLoading(false); });
   }, []);
+
+  // Batch-fetch which videos current user has liked (single query instead of N)
+  useEffect(() => {
+    if (!user || videos.length === 0) { setLikedIds(new Set()); return; }
+    const ids = videos.map((v) => v.id);
+    (supabase as any).from("video_likes").select("video_id").eq("user_id", user.id).in("video_id", ids)
+      .then(({ data }: any) => setLikedIds(new Set((data ?? []).map((r: any) => r.video_id))));
+  }, [user?.id, videos]);
 
   const list = useMemo(
     () => (filter === "all" ? videos : videos.filter((v) => v.category === filter)),
@@ -74,7 +87,7 @@ function Home() {
           <EmptyState />
         ) : (
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {list.map((v) => <VideoCard key={v.id} v={v} />)}
+            {list.map((v) => <VideoCard key={v.id} v={v} initialLiked={likedIds.has(v.id)} />)}
           </div>
         )}
         <div className="h-4" />
@@ -94,32 +107,33 @@ function NowPlayingPinned() {
         className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black border border-primary/50 shadow-2xl shadow-primary/20"
       />
       <div className="mt-2 flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold truncate">{current?.title}</p>
-        <span className="shrink-0 text-xs text-muted-foreground flex items-center gap-1">
-          <Eye className="h-3.5 w-3.5" /> {formatCount(current?.views ?? 0)} views
-        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold truncate">{current?.title}</p>
+          <p className="text-[11px] text-muted-foreground truncate flex items-center gap-2">
+            <span>{current?.channel_name ?? "Visita"}</span>
+            <span className="opacity-60">·</span>
+            <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> {formatCount(current?.views ?? 0)}</span>
+          </p>
+        </div>
+        <FollowButton ownerId={current?.user_id ?? null} size="md" showCount={false} />
       </div>
     </div>
   );
 }
 
 
-function VideoCard({ v }: { v: VideoRow }) {
+function VideoCard({ v, initialLiked }: { v: VideoRow; initialLiked: boolean }) {
   const { play, current } = usePlayer();
   const { user } = useAuth();
   const isActive = current?.id === v.id;
 
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(initialLiked);
   const [likes, setLikes] = useState(v.likes);
   const [shares, setShares] = useState(v.shares);
   const [commentsCount, setCommentsCount] = useState(v.comments_count);
   const [commentsOpen, setCommentsOpen] = useState(false);
 
-  useEffect(() => {
-    if (!user) { setLiked(false); return; }
-    (supabase as any).from("video_likes").select("id").eq("user_id", user.id).eq("video_id", v.id).maybeSingle()
-      .then(({ data }: any) => setLiked(!!data));
-  }, [user?.id, v.id]);
+  useEffect(() => { setLiked(initialLiked); }, [initialLiked]);
 
   const open = () => v.video_url && play({
     id: v.id, title: v.title, video_url: v.video_url,
@@ -160,7 +174,7 @@ function VideoCard({ v }: { v: VideoRow }) {
     <article className={`group rounded-2xl overflow-hidden bg-card border transition-all ${isActive ? "border-primary/70 ring-2 ring-primary/30" : "border-border/60 hover:border-primary/50"}`}>
       <div className="relative aspect-video bg-black">
         {v.thumbnail_url ? (
-          <img src={v.thumbnail_url} alt="" loading="lazy" className="h-full w-full object-cover" />
+          <img src={v.thumbnail_url} alt="" loading="lazy" decoding="async" width={640} height={360} className="h-full w-full object-cover" />
         ) : (
           <div className="h-full w-full bg-gradient-to-br from-secondary to-card" />
         )}
@@ -181,10 +195,11 @@ function VideoCard({ v }: { v: VideoRow }) {
       <div className="p-3">
         <h3 className="font-display font-semibold text-sm leading-snug line-clamp-2">{v.title}</h3>
         <div className="mt-2 flex items-center gap-2">
-          <div className="h-6 w-6 rounded-full gradient-brand flex items-center justify-center text-primary-foreground text-[10px] font-bold">
+          <div className="h-6 w-6 rounded-full gradient-brand flex items-center justify-center text-primary-foreground text-[10px] font-bold shrink-0">
             {(v.channel_name ?? "V").slice(0, 1).toUpperCase()}
           </div>
           <p className="text-xs text-muted-foreground truncate flex-1">{v.channel_name ?? ""}</p>
+          <FollowButton ownerId={v.user_id} size="sm" showCount={false} />
         </div>
         <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
           <button onClick={toggleLike} className={`flex items-center gap-1 transition ${liked ? "text-primary" : "hover:text-primary"}`} aria-label="Like">

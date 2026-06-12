@@ -79,22 +79,29 @@ function PersistentPlayer({ hostEl }: { hostEl: HTMLElement | null }) {
   const [paused, setPaused] = useState(false);
   const [hostRect, setHostRect] = useState<DOMRectReadOnly | null>(null);
 
-  // is host visible in viewport?
+  // is host visible in viewport? throttled via rAF to avoid jank
   const [hostVisible, setHostVisible] = useState(false);
   useEffect(() => {
     if (!hostEl) { setHostVisible(false); setHostRect(null); return; }
-    const updateRect = () => setHostRect(hostEl.getBoundingClientRect());
-    updateRect();
+    let raf = 0;
+    const schedule = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        setHostRect(hostEl.getBoundingClientRect());
+      });
+    };
+    schedule();
     const io = new IntersectionObserver(
-      ([e]) => { setHostVisible(e.isIntersecting && e.intersectionRatio > 0.3); setHostRect(e.boundingClientRect); },
+      ([e]) => { setHostVisible(e.isIntersecting && e.intersectionRatio > 0.3); },
       { threshold: [0, 0.3, 0.6, 1] },
     );
-    const ro = new ResizeObserver(updateRect);
+    const ro = new ResizeObserver(schedule);
     io.observe(hostEl);
     ro.observe(hostEl);
-    window.addEventListener("scroll", updateRect, { passive: true });
-    window.addEventListener("resize", updateRect);
-    return () => { io.disconnect(); ro.disconnect(); window.removeEventListener("scroll", updateRect); window.removeEventListener("resize", updateRect); };
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    return () => { io.disconnect(); ro.disconnect(); window.removeEventListener("scroll", schedule); window.removeEventListener("resize", schedule); if (raf) cancelAnimationFrame(raf); };
   }, [hostEl]);
 
   // mini drag/size
