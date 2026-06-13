@@ -44,6 +44,7 @@ function Home() {
   const [videos, setVideos] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
+  const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     supabase.from("videos")
@@ -52,13 +53,23 @@ function Home() {
       .then(({ data }) => { setVideos((data ?? []) as VideoRow[]); setLoading(false); });
   }, []);
 
-  // Batch-fetch which videos current user has liked (single query instead of N)
   useEffect(() => {
     if (!user || videos.length === 0) { setLikedIds(new Set()); return; }
     const ids = videos.map((v) => v.id);
     (supabase as any).from("video_likes").select("video_id").eq("user_id", user.id).in("video_id", ids)
       .then(({ data }: any) => setLikedIds(new Set((data ?? []).map((r: any) => r.video_id))));
   }, [user?.id, videos]);
+
+  useEffect(() => {
+    const ownerIds = Array.from(new Set(videos.map((v) => v.user_id).filter(Boolean))) as string[];
+    if (ownerIds.length === 0) return;
+    supabase.from("profiles").select("id,avatar_url").in("id", ownerIds)
+      .then(({ data }) => {
+        const m = new Map<string, string>();
+        (data ?? []).forEach((p: any) => { if ((p as any).avatar_url) m.set(p.id, (p as any).avatar_url); });
+        setAvatars(m);
+      });
+  }, [videos]);
 
   const list = useMemo(
     () => (filter === "all" ? videos : videos.filter((v) => v.category === filter)),
