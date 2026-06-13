@@ -44,6 +44,7 @@ function Home() {
   const [videos, setVideos] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
+  const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     supabase.from("videos")
@@ -52,13 +53,23 @@ function Home() {
       .then(({ data }) => { setVideos((data ?? []) as VideoRow[]); setLoading(false); });
   }, []);
 
-  // Batch-fetch which videos current user has liked (single query instead of N)
   useEffect(() => {
     if (!user || videos.length === 0) { setLikedIds(new Set()); return; }
     const ids = videos.map((v) => v.id);
     (supabase as any).from("video_likes").select("video_id").eq("user_id", user.id).in("video_id", ids)
       .then(({ data }: any) => setLikedIds(new Set((data ?? []).map((r: any) => r.video_id))));
   }, [user?.id, videos]);
+
+  useEffect(() => {
+    const ownerIds = Array.from(new Set(videos.map((v) => v.user_id).filter(Boolean))) as string[];
+    if (ownerIds.length === 0) return;
+    supabase.from("profiles").select("id,avatar_url").in("id", ownerIds)
+      .then(({ data }) => {
+        const m = new Map<string, string>();
+        (data ?? []).forEach((p: any) => { if ((p as any).avatar_url) m.set(p.id, (p as any).avatar_url); });
+        setAvatars(m);
+      });
+  }, [videos]);
 
   const list = useMemo(
     () => (filter === "all" ? videos : videos.filter((v) => v.category === filter)),
@@ -87,7 +98,7 @@ function Home() {
           <EmptyState />
         ) : (
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {list.map((v) => <VideoCard key={v.id} v={v} initialLiked={likedIds.has(v.id)} />)}
+            {list.map((v) => <VideoCard key={v.id} v={v} initialLiked={likedIds.has(v.id)} avatarUrl={v.user_id ? avatars.get(v.user_id) ?? null : null} />)}
           </div>
         )}
         <div className="h-4" />
@@ -122,7 +133,7 @@ function NowPlayingPinned() {
 }
 
 
-function VideoCard({ v, initialLiked }: { v: VideoRow; initialLiked: boolean }) {
+function VideoCard({ v, initialLiked, avatarUrl }: { v: VideoRow; initialLiked: boolean; avatarUrl: string | null }) {
   const { play, current } = usePlayer();
   const { user } = useAuth();
   const isActive = current?.id === v.id;
@@ -195,8 +206,12 @@ function VideoCard({ v, initialLiked }: { v: VideoRow; initialLiked: boolean }) 
       <div className="p-3">
         <h3 className="font-display font-semibold text-sm leading-snug line-clamp-2">{v.title}</h3>
         <div className="mt-2 flex items-center gap-2">
-          <div className="h-6 w-6 rounded-full gradient-brand flex items-center justify-center text-primary-foreground text-[10px] font-bold shrink-0">
-            {(v.channel_name ?? "V").slice(0, 1).toUpperCase()}
+          <div className="h-6 w-6 rounded-full overflow-hidden gradient-brand flex items-center justify-center text-primary-foreground text-[10px] font-bold shrink-0">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+            ) : (
+              (v.channel_name ?? "V").slice(0, 1).toUpperCase()
+            )}
           </div>
           <p className="text-xs text-muted-foreground truncate flex-1">{v.channel_name ?? ""}</p>
           <FollowButton ownerId={v.user_id} size="sm" showCount={false} />
