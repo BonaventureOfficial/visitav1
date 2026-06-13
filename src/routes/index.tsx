@@ -206,8 +206,12 @@ function VideoCard({ v, initialLiked, avatarUrl }: { v: VideoRow; initialLiked: 
       <div className="p-3">
         <h3 className="font-display font-semibold text-sm leading-snug line-clamp-2">{v.title}</h3>
         <div className="mt-2 flex items-center gap-2">
-          <div className="h-6 w-6 rounded-full gradient-brand flex items-center justify-center text-primary-foreground text-[10px] font-bold shrink-0">
-            {(v.channel_name ?? "V").slice(0, 1).toUpperCase()}
+          <div className="h-6 w-6 rounded-full overflow-hidden gradient-brand flex items-center justify-center text-primary-foreground text-[10px] font-bold shrink-0">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+            ) : (
+              (v.channel_name ?? "V").slice(0, 1).toUpperCase()
+            )}
           </div>
           <p className="text-xs text-muted-foreground truncate flex-1">{v.channel_name ?? ""}</p>
           <FollowButton ownerId={v.user_id} size="sm" showCount={false} />
