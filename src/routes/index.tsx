@@ -133,7 +133,7 @@ function NowPlayingPinned() {
 }
 
 
-function VideoCard({ v, initialLiked }: { v: VideoRow; initialLiked: boolean }) {
+function VideoCard({ v, initialLiked, avatarUrl }: { v: VideoRow; initialLiked: boolean; avatarUrl: string | null }) {
   const { play, current } = usePlayer();
   const { user } = useAuth();
   const isActive = current?.id === v.id;
