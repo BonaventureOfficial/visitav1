@@ -90,8 +90,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Visita — Shows, Podcasts & Documentaries" },
       { name: "twitter:description", content: "Stream the best shows, podcasts and documentaries on Visita." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Rry5JbD6Q6VlTNZgJ2rv3Cb7eyX2/social-images/social-1781312835600-file_00000000612871fd8e767efe0248ab36.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Rry5JbD6Q6VlTNZgJ2rv3Cb7eyX2/social-images/social-1781312835600-file_00000000612871fd8e767efe0248ab36.webp" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Rry5JbD6Q6VlTNZgJ2rv3Cb7eyX2/social-images/social-1781314734044-file_00000000612871fd8e767efe0248ab36.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Rry5JbD6Q6VlTNZgJ2rv3Cb7eyX2/social-images/social-1781314734044-file_00000000612871fd8e767efe0248ab36.webp" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
