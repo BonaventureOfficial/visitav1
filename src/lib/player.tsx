@@ -321,7 +321,6 @@ function PersistentPlayer({ hostEl }: { hostEl: HTMLElement | null }) {
           autoPlay
           playsInline
           preload={lowBandwidth ? "metadata" : "auto"}
-          crossOrigin="anonymous"
           controls={expanded || inline}
           className={
             inline
