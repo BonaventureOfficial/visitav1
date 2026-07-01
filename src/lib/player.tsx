@@ -320,7 +320,8 @@ function PersistentPlayer({ hostEl }: { hostEl: HTMLElement | null }) {
           poster={current.thumbnail_url ?? undefined}
           autoPlay
           playsInline
-          preload="auto"
+          preload={lowBandwidth ? "metadata" : "auto"}
+          crossOrigin="anonymous"
           controls={expanded || inline}
           className={
             inline
