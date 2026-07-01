@@ -78,6 +78,90 @@ function PersistentPlayer({ hostEl }: { hostEl: HTMLElement | null }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [paused, setPaused] = useState(false);
   const [hostRect, setHostRect] = useState<DOMRectReadOnly | null>(null);
+  const [lowBandwidth, setLowBandwidth] = useState(false);
+  const stallTimerRef = useRef<number | null>(null);
+  const retryCountRef = useRef(0);
+  const lastPosRef = useRef(0);
+
+  // Detect low-bandwidth / data-saver
+  useEffect(() => {
+    const nav = (typeof navigator !== "undefined" ? (navigator as any) : null);
+    const conn = nav?.connection || nav?.mozConnection || nav?.webkitConnection;
+    if (!conn) return;
+    const update = () => {
+      const et = String(conn.effectiveType || "");
+      setLowBandwidth(!!conn.saveData || et === "slow-2g" || et === "2g" || et === "3g");
+    };
+    update();
+    conn.addEventListener?.("change", update);
+    return () => conn.removeEventListener?.("change", update);
+  }, []);
+
+  // Persist playback position per video id; restore on load
+  useEffect(() => {
+    const v = videoRef.current; if (!v || !current) return;
+    const key = `visita:pos:${current.id}`;
+    let saved = 0;
+    try { saved = parseFloat(localStorage.getItem(key) || "0") || 0; } catch { /* ignore */ }
+    const onLoaded = () => {
+      if (saved > 3 && saved < (v.duration || Infinity) - 5) {
+        try { v.currentTime = saved; } catch { /* ignore */ }
+      }
+    };
+    v.addEventListener("loadedmetadata", onLoaded);
+    const save = () => {
+      lastPosRef.current = v.currentTime;
+      try { localStorage.setItem(key, String(v.currentTime)); } catch { /* ignore */ }
+    };
+    const iv = window.setInterval(save, 4000);
+    return () => { v.removeEventListener("loadedmetadata", onLoaded); window.clearInterval(iv); save(); };
+  }, [current?.id]);
+
+  // Anti-freeze watchdog + auto-reconnect
+  useEffect(() => {
+    const v = videoRef.current; if (!v || !current) return;
+    const clearStall = () => { if (stallTimerRef.current) { window.clearTimeout(stallTimerRef.current); stallTimerRef.current = null; } };
+    const armStall = () => {
+      clearStall();
+      stallTimerRef.current = window.setTimeout(() => {
+        // nudge: tiny seek to re-buffer
+        try {
+          const t = v.currentTime;
+          v.currentTime = Math.max(0, t - 0.05);
+        } catch { /* ignore */ }
+      }, 4000);
+    };
+    const onWaiting = () => armStall();
+    const onStalled = () => armStall();
+    const onPlaying = () => { clearStall(); retryCountRef.current = 0; };
+    const onError = () => {
+      const retry = Math.min(retryCountRef.current, 5);
+      const delay = Math.min(15000, 500 * Math.pow(2, retry));
+      retryCountRef.current += 1;
+      window.setTimeout(() => {
+        const at = lastPosRef.current || v.currentTime || 0;
+        try {
+          v.load();
+          const resume = () => { try { v.currentTime = at; } catch { /* ignore */ } v.play().catch(() => {}); v.removeEventListener("loadedmetadata", resume); };
+          v.addEventListener("loadedmetadata", resume);
+        } catch { /* ignore */ }
+      }, delay);
+    };
+    const onOnline = () => { if (v.paused && v.error) onError(); };
+    v.addEventListener("waiting", onWaiting);
+    v.addEventListener("stalled", onStalled);
+    v.addEventListener("playing", onPlaying);
+    v.addEventListener("error", onError);
+    window.addEventListener("online", onOnline);
+    return () => {
+      clearStall();
+      v.removeEventListener("waiting", onWaiting);
+      v.removeEventListener("stalled", onStalled);
+      v.removeEventListener("playing", onPlaying);
+      v.removeEventListener("error", onError);
+      window.removeEventListener("online", onOnline);
+    };
+  }, [current?.id]);
 
   // is host visible in viewport? throttled via rAF to avoid jank
   const [hostVisible, setHostVisible] = useState(false);
