@@ -23,6 +23,7 @@ interface VideoRow {
   comments_count: number;
   reposts: number;
   shares: number;
+  supav_count: number;
   channel_name: string | null;
   user_id: string | null;
   created_at: string;
