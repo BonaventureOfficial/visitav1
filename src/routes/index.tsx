@@ -222,6 +222,7 @@ function VideoCard({ v, initialLiked, avatarUrl }: { v: VideoRow; initialLiked: 
           <button onClick={toggleLike} className={`flex items-center gap-1 transition ${liked ? "text-primary" : "hover:text-primary"}`} aria-label="Like">
             <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} /> {formatCount(likes)}
           </button>
+          <SupavButton videoId={v.id} initialCount={v.supav_count ?? 0} />
           <button onClick={(e) => { e.stopPropagation(); setCommentsOpen((open) => !open); }} className={`flex items-center gap-1 transition ${commentsOpen ? "text-primary" : "hover:text-primary"}`} aria-label="Comments">
             <MessageCircle className="h-4 w-4" /> {formatCount(commentsCount)}
           </button>
