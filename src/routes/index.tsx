@@ -49,7 +49,7 @@ function Home() {
 
   useEffect(() => {
     supabase.from("videos")
-      .select("id,title,description,category,thumbnail_url,video_url,views,likes,comments_count,reposts,shares,channel_name,user_id,created_at")
+      .select("id,title,description,category,thumbnail_url,video_url,views,likes,comments_count,reposts,shares,supav_count,channel_name,user_id,created_at")
       .order("created_at", { ascending: false }).limit(60)
       .then(({ data }) => { setVideos((data ?? []) as VideoRow[]); setLoading(false); });
   }, []);
