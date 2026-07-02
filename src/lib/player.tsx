@@ -85,7 +85,7 @@ export function useVideoHost(id: string | undefined, el: HTMLElement | null) {
   }, [id, el]);
 }
 
-function PersistentPlayer({ hostEl }: { hostEl: HTMLElement | null }) {
+function PersistentPlayer({ hostEl, bumpWatched }: { hostEl: HTMLElement | null; bumpWatched: (id: string, seconds: number) => void }) {
   const { current, stop, expanded, setExpanded } = usePlayer();
   const { user } = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
