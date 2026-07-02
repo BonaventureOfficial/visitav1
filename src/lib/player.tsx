@@ -229,6 +229,7 @@ function PersistentPlayer({ hostEl, bumpWatched }: { hostEl: HTMLElement | null;
       const dt = t - lastTimeRef.current;
       if (dt > 0 && dt < 1.5) watchedRef.current += dt;
       lastTimeRef.current = t;
+      if (current.id) bumpWatched(current.id, watchedRef.current);
       if (watchedRef.current >= 30 && user && current.id && !recordedRef.current.has(current.id)) {
         recordedRef.current.add(current.id);
         const { error } = await (supabase as any).from("video_views").insert({ user_id: user.id, video_id: current.id });
