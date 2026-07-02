@@ -23,23 +23,36 @@ interface PlayerCtx {
   expanded: boolean;
   setExpanded: (e: boolean) => void;
   registerHost: (id: string, el: HTMLElement | null) => void;
+  watched: Record<string, number>;
+  bumpWatched: (id: string, seconds: number) => void;
 }
 
 const Ctx = createContext<PlayerCtx>({
   current: null, play: () => {}, stop: () => {}, expanded: false, setExpanded: () => {},
-  registerHost: () => {},
+  registerHost: () => {}, watched: {}, bumpWatched: () => {},
 });
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const [current, setCurrent] = useState<PlayingVideo | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [hostEl, setHostEl] = useState<HTMLElement | null>(null);
+  const [watched, setWatched] = useState<Record<string, number>>({});
   const hostMapRef = useRef<Map<string, HTMLElement>>(new Map());
 
   const registerHost = (id: string, el: HTMLElement | null) => {
     if (el) hostMapRef.current.set(id, el);
     else hostMapRef.current.delete(id);
     if (current && id === current.id) setHostEl(el ?? null);
+  };
+
+  const bumpWatched = (id: string, seconds: number) => {
+    setWatched((prev) => {
+      const prevSec = prev[id] ?? 0;
+      if (seconds <= prevSec) return prev;
+      // throttle: bucket updates every 5s, always update once past 60s
+      if (seconds < 60 && Math.floor(seconds / 5) === Math.floor(prevSec / 5)) return prev;
+      return { ...prev, [id]: seconds };
+    });
   };
 
   useEffect(() => {
@@ -49,12 +62,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider value={{
-      current, expanded, setExpanded, registerHost,
+      current, expanded, setExpanded, registerHost, watched, bumpWatched,
       play: (v) => { setCurrent(v); setExpanded(false); },
       stop: () => { setCurrent(null); setExpanded(false); },
     }}>
       {children}
-      <PersistentPlayer hostEl={hostEl} />
+      <PersistentPlayer hostEl={hostEl} bumpWatched={bumpWatched} />
     </Ctx.Provider>
   );
 }
