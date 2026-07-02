@@ -4,6 +4,7 @@ import { Eye, Play, Film, Heart, MessageCircle, Share2, Send } from "lucide-reac
 import { AppLayout } from "@/components/AppLayout";
 import { CategoryMarquee } from "@/components/CategoryMarquee";
 import { FollowButton } from "@/components/FollowButton";
+import { SupavButton } from "@/components/SupavButton";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +24,7 @@ interface VideoRow {
   comments_count: number;
   reposts: number;
   shares: number;
+  supav_count: number;
   channel_name: string | null;
   user_id: string | null;
   created_at: string;
@@ -48,7 +50,7 @@ function Home() {
 
   useEffect(() => {
     supabase.from("videos")
-      .select("id,title,description,category,thumbnail_url,video_url,views,likes,comments_count,reposts,shares,channel_name,user_id,created_at")
+      .select("id,title,description,category,thumbnail_url,video_url,views,likes,comments_count,reposts,shares,supav_count,channel_name,user_id,created_at")
       .order("created_at", { ascending: false }).limit(60)
       .then(({ data }) => { setVideos((data ?? []) as VideoRow[]); setLoading(false); });
   }, []);
@@ -220,6 +222,7 @@ function VideoCard({ v, initialLiked, avatarUrl }: { v: VideoRow; initialLiked: 
           <button onClick={toggleLike} className={`flex items-center gap-1 transition ${liked ? "text-primary" : "hover:text-primary"}`} aria-label="Like">
             <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} /> {formatCount(likes)}
           </button>
+          <SupavButton videoId={v.id} initialCount={v.supav_count ?? 0} />
           <button onClick={(e) => { e.stopPropagation(); setCommentsOpen((open) => !open); }} className={`flex items-center gap-1 transition ${commentsOpen ? "text-primary" : "hover:text-primary"}`} aria-label="Comments">
             <MessageCircle className="h-4 w-4" /> {formatCount(commentsCount)}
           </button>
