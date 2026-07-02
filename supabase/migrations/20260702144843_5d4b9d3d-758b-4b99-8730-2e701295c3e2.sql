@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.bump_video_supavs() FROM PUBLIC, anon, authenticated;
