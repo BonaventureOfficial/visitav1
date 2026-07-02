@@ -4,6 +4,7 @@ import { Eye, Play, Film, Heart, MessageCircle, Share2, Send } from "lucide-reac
 import { AppLayout } from "@/components/AppLayout";
 import { CategoryMarquee } from "@/components/CategoryMarquee";
 import { FollowButton } from "@/components/FollowButton";
+import { SupavButton } from "@/components/SupavButton";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
