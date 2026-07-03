@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Play, Film, Heart, MessageCircle, Share2, Send } from "lucide-react";
+import { Eye, Play, Film, Heart, MessageCircle, Share2, Send, Zap } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { CategoryMarquee } from "@/components/CategoryMarquee";
 import { FollowButton } from "@/components/FollowButton";
@@ -196,6 +196,9 @@ function VideoCard({ v, initialLiked, avatarUrl }: { v: VideoRow; initialLiked: 
         </span>
         <span className="absolute top-2 right-2 text-[10px] font-semibold bg-black/70 backdrop-blur text-white px-2 py-0.5 rounded-full flex items-center gap-1">
           <Eye className="h-3 w-3" /> {formatCount(v.views)}
+        </span>
+        <span className="absolute top-9 right-2 text-[10px] font-semibold bg-black/70 backdrop-blur text-primary border border-primary/40 px-2 py-0.5 rounded-full flex items-center gap-1" title="Total SupaV boosts">
+          <Zap className="h-3 w-3 fill-current" /> {formatCount(v.supav_count ?? 0)}
         </span>
         <button
           onClick={open}
