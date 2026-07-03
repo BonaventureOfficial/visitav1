@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Play, Film, Heart, MessageCircle, Share2, Send } from "lucide-react";
+import { Eye, Play, Film, Heart, MessageCircle, Share2, Send, Zap } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { CategoryMarquee } from "@/components/CategoryMarquee";
 import { FollowButton } from "@/components/FollowButton";
