@@ -130,6 +130,10 @@ function UploadPage() {
       toast.error(t("thumbRequired"));
       return;
     }
+    if (kind === "reel" && duration > REEL_MAX_SECONDS) {
+      toast.error(t("reelTooLong"));
+      return;
+    }
 
     setSubmitting(true);
     setProgress(5);
