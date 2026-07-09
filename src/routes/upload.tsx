@@ -13,16 +13,20 @@ export const Route = createFileRoute("/upload")({
 });
 
 type Cat = "emission" | "podcast" | "documentary";
+type Kind = "video" | "reel";
 
 const YEAR = 60 * 60 * 24 * 365;
+const REEL_MAX_SECONDS = 120;
 
 function UploadPage() {
   const { t } = useI18n();
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
+  const [kind, setKind] = useState<Kind>("video");
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string>("");
+  const [duration, setDuration] = useState<number>(0);
   const [frames, setFrames] = useState<string[]>([]); // 3 auto frames as data URLs
   const [customThumb, setCustomThumb] = useState<{ url: string; blob: Blob } | null>(null);
   const [selectedThumb, setSelectedThumb] = useState<number | "custom" | null>(null);
@@ -73,9 +77,13 @@ function UploadPage() {
   const onLoadedMetadata = async () => {
     const video = videoRef.current;
     if (!video) return;
-    const duration = video.duration;
-    if (!isFinite(duration) || duration <= 0) return;
-    const times = [duration * 0.25, duration * 0.5, duration * 0.75];
+    const dur = video.duration;
+    if (!isFinite(dur) || dur <= 0) return;
+    setDuration(dur);
+    if (kind === "reel" && dur > REEL_MAX_SECONDS) {
+      toast.error(t("reelTooLong"));
+    }
+    const times = [dur * 0.25, dur * 0.5, dur * 0.75];
     const captured: string[] = [];
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth || 1280;
@@ -120,6 +128,10 @@ function UploadPage() {
     }
     if (selectedThumb === null) {
       toast.error(t("thumbRequired"));
+      return;
+    }
+    if (kind === "reel" && duration > REEL_MAX_SECONDS) {
+      toast.error(t("reelTooLong"));
       return;
     }
 
@@ -168,7 +180,7 @@ function UploadPage() {
         .eq("id", user.id)
         .maybeSingle();
 
-      const { error: insErr } = await supabase.from("videos").insert({
+      const { error: insErr } = await (supabase as any).from("videos").insert({
         user_id: user.id,
         title: title.trim(),
         description: description.trim() || null,
@@ -176,12 +188,14 @@ function UploadPage() {
         video_url: vSigned?.signedUrl ?? null,
         thumbnail_url: tSigned?.signedUrl ?? null,
         channel_name: profile?.channel_name ?? user.email?.split("@")[0] ?? null,
+        is_reel: kind === "reel",
+        duration_seconds: Math.round(duration) || null,
       });
       if (insErr) throw insErr;
 
       setProgress(100);
       toast.success("✓");
-      navigate({ to: "/" });
+      navigate({ to: kind === "reel" ? "/reels" : "/" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Upload failed";
       toast.error(msg);
@@ -196,6 +210,39 @@ function UploadPage() {
         <h1 className="font-display text-2xl font-bold">{t("uploadTitle")}</h1>
 
         <form onSubmit={onSubmit} className="mt-6 space-y-6">
+          {/* Kind picker: long video vs reel */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-2">
+              {t("chooseType")} <span className="text-primary">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {(["video", "reel"] as const).map((k) => (
+                <button
+                  type="button"
+                  key={k}
+                  onClick={() => setKind(k)}
+                  className={`rounded-xl border p-3 text-left transition ${
+                    kind === k
+                      ? "bg-primary/10 border-primary text-foreground"
+                      : "bg-card border-border text-muted-foreground hover:border-primary/50"
+                  }`}
+                >
+                  <div className="text-sm font-semibold capitalize">
+                    {k === "reel" ? t("reel") : t("longVideo")}
+                  </div>
+                  <div className="text-[11px] mt-0.5 opacity-80">
+                    {k === "reel" ? t("reelHint") : t("longVideoHint")}
+                  </div>
+                </button>
+              ))}
+            </div>
+            {kind === "reel" && duration > 0 && (
+              <p className={`mt-2 text-[11px] ${duration > REEL_MAX_SECONDS ? "text-destructive" : "text-muted-foreground"}`}>
+                {Math.round(duration)}s / {REEL_MAX_SECONDS}s
+              </p>
+            )}
+          </div>
+
           {/* Video dropzone — orange HD frame */}
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-2">

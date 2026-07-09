@@ -226,7 +226,9 @@ export type Database = {
           comments_count: number
           created_at: string
           description: string | null
+          duration_seconds: number | null
           id: string
+          is_reel: boolean
           likes: number
           reposts: number
           shares: number
@@ -243,7 +245,9 @@ export type Database = {
           comments_count?: number
           created_at?: string
           description?: string | null
+          duration_seconds?: number | null
           id?: string
+          is_reel?: boolean
           likes?: number
           reposts?: number
           shares?: number
@@ -260,7 +264,9 @@ export type Database = {
           comments_count?: number
           created_at?: string
           description?: string | null
+          duration_seconds?: number | null
           id?: string
+          is_reel?: boolean
           likes?: number
           reposts?: number
           shares?: number
