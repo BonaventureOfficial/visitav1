@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Heart, MessageCircle, Share2, Send, Volume2, VolumeX, Clapperboard } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { FollowButton } from "@/components/FollowButton";
@@ -377,5 +377,3 @@ function CommentsSheet({ videoId, onClose, onAdded }: { videoId: string; onClose
   );
 }
 
-const _memoUsedTypes = useMemo;
-void _memoUsedTypes;
