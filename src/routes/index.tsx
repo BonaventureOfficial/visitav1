@@ -49,11 +49,11 @@ function Home() {
   const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
-    supabase.from("videos")
+    (supabase as any).from("videos")
       .select("id,title,description,category,thumbnail_url,video_url,views,likes,comments_count,reposts,shares,supav_count,channel_name,user_id,created_at")
-      .eq("is_reel" as any, false as any)
+      .eq("is_reel", false)
       .order("created_at", { ascending: false }).limit(60)
-      .then(({ data }) => { setVideos((data ?? []) as VideoRow[]); setLoading(false); });
+      .then(({ data }: any) => { setVideos((data ?? []) as VideoRow[]); setLoading(false); });
   }, []);
 
   useEffect(() => {
