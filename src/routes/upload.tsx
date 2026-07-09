@@ -210,6 +210,39 @@ function UploadPage() {
         <h1 className="font-display text-2xl font-bold">{t("uploadTitle")}</h1>
 
         <form onSubmit={onSubmit} className="mt-6 space-y-6">
+          {/* Kind picker: long video vs reel */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-2">
+              {t("chooseType")} <span className="text-primary">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {(["video", "reel"] as const).map((k) => (
+                <button
+                  type="button"
+                  key={k}
+                  onClick={() => setKind(k)}
+                  className={`rounded-xl border p-3 text-left transition ${
+                    kind === k
+                      ? "bg-primary/10 border-primary text-foreground"
+                      : "bg-card border-border text-muted-foreground hover:border-primary/50"
+                  }`}
+                >
+                  <div className="text-sm font-semibold capitalize">
+                    {k === "reel" ? t("reel") : t("longVideo")}
+                  </div>
+                  <div className="text-[11px] mt-0.5 opacity-80">
+                    {k === "reel" ? t("reelHint") : t("longVideoHint")}
+                  </div>
+                </button>
+              ))}
+            </div>
+            {kind === "reel" && duration > 0 && (
+              <p className={`mt-2 text-[11px] ${duration > REEL_MAX_SECONDS ? "text-destructive" : "text-muted-foreground"}`}>
+                {Math.round(duration)}s / {REEL_MAX_SECONDS}s
+              </p>
+            )}
+          </div>
+
           {/* Video dropzone — orange HD frame */}
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-2">
