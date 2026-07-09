@@ -180,7 +180,7 @@ function UploadPage() {
         .eq("id", user.id)
         .maybeSingle();
 
-      const { error: insErr } = await supabase.from("videos").insert({
+      const { error: insErr } = await (supabase as any).from("videos").insert({
         user_id: user.id,
         title: title.trim(),
         description: description.trim() || null,
@@ -188,12 +188,14 @@ function UploadPage() {
         video_url: vSigned?.signedUrl ?? null,
         thumbnail_url: tSigned?.signedUrl ?? null,
         channel_name: profile?.channel_name ?? user.email?.split("@")[0] ?? null,
+        is_reel: kind === "reel",
+        duration_seconds: Math.round(duration) || null,
       });
       if (insErr) throw insErr;
 
       setProgress(100);
       toast.success("✓");
-      navigate({ to: "/" });
+      navigate({ to: kind === "reel" ? "/reels" : "/" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Upload failed";
       toast.error(msg);
