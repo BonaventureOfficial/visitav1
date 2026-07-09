@@ -77,9 +77,13 @@ function UploadPage() {
   const onLoadedMetadata = async () => {
     const video = videoRef.current;
     if (!video) return;
-    const duration = video.duration;
-    if (!isFinite(duration) || duration <= 0) return;
-    const times = [duration * 0.25, duration * 0.5, duration * 0.75];
+    const dur = video.duration;
+    if (!isFinite(dur) || dur <= 0) return;
+    setDuration(dur);
+    if (kind === "reel" && dur > REEL_MAX_SECONDS) {
+      toast.error(t("reelTooLong"));
+    }
+    const times = [dur * 0.25, dur * 0.5, dur * 0.75];
     const captured: string[] = [];
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth || 1280;
