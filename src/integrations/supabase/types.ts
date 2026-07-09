@@ -275,24 +275,7 @@ export type Database = {
       }
     }
     Views: {
-      profiles_public: {
-        Row: {
-          avatar_url: string | null
-          channel_name: string | null
-          id: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          channel_name?: string | null
-          id?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          channel_name?: string | null
-          id?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       [_ in never]: never
