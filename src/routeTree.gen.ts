@@ -10,8 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UploadRouteImport } from './routes/upload'
-import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ReelsRouteImport } from './routes/reels'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -20,14 +20,14 @@ const UploadRoute = UploadRouteImport.update({
   path: '/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ReelsRoute = ReelsRouteImport.update({
   id: '/reels',
   path: '/reels',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -44,38 +44,38 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/reels': typeof ReelsRoute
   '/profile': typeof ProfileRoute
+  '/reels': typeof ReelsRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/reels': typeof ReelsRoute
   '/profile': typeof ProfileRoute
+  '/reels': typeof ReelsRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/reels': typeof ReelsRoute
   '/profile': typeof ProfileRoute
+  '/reels': typeof ReelsRoute
   '/upload': typeof UploadRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/reels' | '/profile' | '/upload'
+  fullPaths: '/' | '/auth' | '/profile' | '/reels' | '/upload'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/reels' | '/profile' | '/upload'
-  id: '__root__' | '/' | '/auth' | '/reels' | '/profile' | '/upload'
+  to: '/' | '/auth' | '/profile' | '/reels' | '/upload'
+  id: '__root__' | '/' | '/auth' | '/profile' | '/reels' | '/upload'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
-  ReelsRoute: typeof ReelsRoute
   ProfileRoute: typeof ProfileRoute
+  ReelsRoute: typeof ReelsRoute
   UploadRoute: typeof UploadRoute
 }
 
@@ -88,18 +88,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UploadRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/reels': {
       id: '/reels'
       path: '/reels'
       fullPath: '/reels'
       preLoaderRoute: typeof ReelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -122,8 +122,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
-  ReelsRoute: ReelsRoute,
   ProfileRoute: ProfileRoute,
+  ReelsRoute: ReelsRoute,
   UploadRoute: UploadRoute,
 }
 export const routeTree = rootRouteImport
