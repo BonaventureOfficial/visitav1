@@ -13,16 +13,20 @@ export const Route = createFileRoute("/upload")({
 });
 
 type Cat = "emission" | "podcast" | "documentary";
+type Kind = "video" | "reel";
 
 const YEAR = 60 * 60 * 24 * 365;
+const REEL_MAX_SECONDS = 120;
 
 function UploadPage() {
   const { t } = useI18n();
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
+  const [kind, setKind] = useState<Kind>("video");
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string>("");
+  const [duration, setDuration] = useState<number>(0);
   const [frames, setFrames] = useState<string[]>([]); // 3 auto frames as data URLs
   const [customThumb, setCustomThumb] = useState<{ url: string; blob: Blob } | null>(null);
   const [selectedThumb, setSelectedThumb] = useState<number | "custom" | null>(null);
