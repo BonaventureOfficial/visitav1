@@ -17,7 +17,8 @@ export const Route = createFileRoute("/profile")({
 interface MyVideo {
   id: string; title: string; thumbnail_url: string | null; video_url: string | null;
   views: number; likes: number; comments_count: number; supav_count: number;
-  channel_name: string | null; user_id: string | null;
+  channel_name: string | null; user_id: string | null; is_reel: boolean | null;
+  duration_seconds: number | null;
 }
 
 function ProfilePage() {
