@@ -32,6 +32,7 @@ function ProfilePage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const thumbRef = useRef<HTMLInputElement>(null);
   const [videos, setVideos] = useState<MyVideo[]>([]);
+  const [tab, setTab] = useState<"videos" | "reels">("videos");
   const [followerCount, setFollowerCount] = useState(0);
   const [selected, setSelected] = useState<MyVideo | null>(null);
   const [busy, setBusy] = useState(false);
