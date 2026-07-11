@@ -204,17 +204,32 @@ function ProfilePage() {
           ))}
         </div>
 
-        <h2 className="mt-8 mb-3 font-display text-lg font-bold flex items-center gap-2">
-          <Film className="h-4 w-4 text-primary" /> {t("library")}
-        </h2>
+        <div className="mt-8 mb-3 flex items-center justify-between gap-3">
+          <h2 className="font-display text-lg font-bold flex items-center gap-2">
+            <Film className="h-4 w-4 text-primary" /> {t("library")}
+          </h2>
+          <div className="inline-flex rounded-full bg-secondary p-0.5 text-xs font-semibold">
+            {(["videos", "reels"] as const).map((k) => (
+              <button
+                key={k}
+                onClick={() => setTab(k)}
+                className={`px-3 py-1.5 rounded-full transition ${tab === k ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+              >
+                {k === "videos" ? "Videos" : "Reels"}
+              </button>
+            ))}
+          </div>
+        </div>
 
-        {videos.length === 0 ? (
+        {(() => {
+          const shown = videos.filter((v) => (tab === "reels" ? v.is_reel === true : v.is_reel !== true));
+          return shown.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
             {t("noVideosYet")}
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            {videos.map((v) => (
+            {shown.map((v) => (
               <button
                 key={v.id}
                 onClick={() => setSelected(v)}
