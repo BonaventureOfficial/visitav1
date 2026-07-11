@@ -249,7 +249,8 @@ function ProfilePage() {
               </button>
             ))}
           </div>
-        )}
+        );
+        })()}
         <div className="h-6" />
       </section>
 
