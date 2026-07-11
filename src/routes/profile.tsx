@@ -17,7 +17,8 @@ export const Route = createFileRoute("/profile")({
 interface MyVideo {
   id: string; title: string; thumbnail_url: string | null; video_url: string | null;
   views: number; likes: number; comments_count: number; supav_count: number;
-  channel_name: string | null; user_id: string | null;
+  channel_name: string | null; user_id: string | null; is_reel: boolean | null;
+  duration_seconds: number | null;
 }
 
 function ProfilePage() {
@@ -31,6 +32,7 @@ function ProfilePage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const thumbRef = useRef<HTMLInputElement>(null);
   const [videos, setVideos] = useState<MyVideo[]>([]);
+  const [tab, setTab] = useState<"videos" | "reels">("videos");
   const [followerCount, setFollowerCount] = useState(0);
   const [selected, setSelected] = useState<MyVideo | null>(null);
   const [busy, setBusy] = useState(false);
@@ -41,7 +43,7 @@ function ProfilePage() {
 
   const reloadVideos = () => {
     if (!user) return;
-    supabase.from("videos").select("id,title,thumbnail_url,video_url,views,likes,comments_count,supav_count,channel_name,user_id")
+    supabase.from("videos").select("id,title,thumbnail_url,video_url,views,likes,comments_count,supav_count,channel_name,user_id,is_reel,duration_seconds")
       .eq("user_id", user.id).order("created_at", { ascending: false })
       .then(({ data }) => setVideos((data ?? []) as MyVideo[]));
   };
@@ -202,17 +204,32 @@ function ProfilePage() {
           ))}
         </div>
 
-        <h2 className="mt-8 mb-3 font-display text-lg font-bold flex items-center gap-2">
-          <Film className="h-4 w-4 text-primary" /> {t("library")}
-        </h2>
+        <div className="mt-8 mb-3 flex items-center justify-between gap-3">
+          <h2 className="font-display text-lg font-bold flex items-center gap-2">
+            <Film className="h-4 w-4 text-primary" /> {t("library")}
+          </h2>
+          <div className="inline-flex rounded-full bg-secondary p-0.5 text-xs font-semibold">
+            {(["videos", "reels"] as const).map((k) => (
+              <button
+                key={k}
+                onClick={() => setTab(k)}
+                className={`px-3 py-1.5 rounded-full transition ${tab === k ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+              >
+                {k === "videos" ? "Videos" : "Reels"}
+              </button>
+            ))}
+          </div>
+        </div>
 
-        {videos.length === 0 ? (
+        {(() => {
+          const shown = videos.filter((v) => (tab === "reels" ? v.is_reel === true : v.is_reel !== true));
+          return shown.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
             {t("noVideosYet")}
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            {videos.map((v) => (
+            {shown.map((v) => (
               <button
                 key={v.id}
                 onClick={() => setSelected(v)}
@@ -232,7 +249,8 @@ function ProfilePage() {
               </button>
             ))}
           </div>
-        )}
+        );
+        })()}
         <div className="h-6" />
       </section>
 
