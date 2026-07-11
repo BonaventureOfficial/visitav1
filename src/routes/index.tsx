@@ -47,6 +47,7 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
+  const [bigAvatar, setBigAvatar] = useState<{ url: string; name: string } | null>(null);
 
   useEffect(() => {
     (supabase as any).from("videos")
@@ -81,6 +82,10 @@ function Home() {
 
   const { current } = usePlayer();
 
+  const openAvatar = (url: string | null, name: string | null) => {
+    if (url) setBigAvatar({ url, name: name ?? "" });
+  };
+
   return (
     <AppLayout>
       <section className="mx-auto max-w-7xl px-3 pt-3">
@@ -101,14 +106,39 @@ function Home() {
           <EmptyState />
         ) : (
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {list.map((v) => <VideoCard key={v.id} v={v} initialLiked={likedIds.has(v.id)} avatarUrl={v.user_id ? avatars.get(v.user_id) ?? null : null} />)}
+            {list.map((v) => <VideoCard key={v.id} v={v} initialLiked={likedIds.has(v.id)} avatarUrl={v.user_id ? avatars.get(v.user_id) ?? null : null} onAvatarClick={openAvatar} />)}
           </div>
         )}
         <div className="h-4" />
       </section>
+
+      {bigAvatar && (
+        <div
+          className="fixed inset-0 z-[90] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6"
+          onClick={() => setBigAvatar(null)}
+        >
+          <div className="flex flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={bigAvatar.url}
+              alt={bigAvatar.name}
+              className="max-h-[80vh] max-w-[90vw] rounded-3xl object-contain shadow-2xl border-2 border-primary/40"
+            />
+            {bigAvatar.name && (
+              <p className="text-white font-semibold text-sm">{bigAvatar.name}</p>
+            )}
+            <button
+              onClick={() => setBigAvatar(null)}
+              className="rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-4 py-2"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
+
 
 function NowPlayingPinned() {
   const { current } = usePlayer();
@@ -136,7 +166,7 @@ function NowPlayingPinned() {
 }
 
 
-function VideoCard({ v, initialLiked, avatarUrl }: { v: VideoRow; initialLiked: boolean; avatarUrl: string | null }) {
+function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow; initialLiked: boolean; avatarUrl: string | null; onAvatarClick: (url: string | null, name: string | null) => void }) {
   const { play, current } = usePlayer();
   const { user } = useAuth();
   const isActive = current?.id === v.id;
@@ -212,13 +242,19 @@ function VideoCard({ v, initialLiked, avatarUrl }: { v: VideoRow; initialLiked: 
       <div className="p-3">
         <h3 className="font-display font-semibold text-sm leading-snug line-clamp-2">{v.title}</h3>
         <div className="mt-2 flex items-center gap-2">
-          <div className="h-6 w-6 rounded-full overflow-hidden gradient-brand flex items-center justify-center text-primary-foreground text-[10px] font-bold shrink-0">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onAvatarClick(avatarUrl, v.channel_name); }}
+            disabled={!avatarUrl}
+            className="h-6 w-6 rounded-full overflow-hidden gradient-brand flex items-center justify-center text-primary-foreground text-[10px] font-bold shrink-0 disabled:cursor-default hover:ring-2 hover:ring-primary/60 transition"
+            aria-label={avatarUrl ? "View profile picture" : "No avatar"}
+          >
             {avatarUrl ? (
               <img src={avatarUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
             ) : (
               (v.channel_name ?? "V").slice(0, 1).toUpperCase()
             )}
-          </div>
+          </button>
           <p className="text-xs text-muted-foreground truncate flex-1">{v.channel_name ?? ""}</p>
           <FollowButton ownerId={v.user_id} size="sm" showCount={false} />
         </div>
@@ -241,6 +277,7 @@ function VideoCard({ v, initialLiked, avatarUrl }: { v: VideoRow; initialLiked: 
     </article>
   );
 }
+
 
 interface CommentRow {
   id: string;

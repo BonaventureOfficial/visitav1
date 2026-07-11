@@ -333,6 +333,7 @@ function PersistentPlayer({ hostEl, bumpWatched }: { hostEl: HTMLElement | null;
           src={current.video_url}
           poster={current.thumbnail_url ?? undefined}
           autoPlay
+          loop
           playsInline
           preload={lowBandwidth ? "metadata" : "auto"}
           controls={expanded || inline}
