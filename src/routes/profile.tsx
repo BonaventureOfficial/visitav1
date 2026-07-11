@@ -43,7 +43,7 @@ function ProfilePage() {
 
   const reloadVideos = () => {
     if (!user) return;
-    supabase.from("videos").select("id,title,thumbnail_url,video_url,views,likes,comments_count,supav_count,channel_name,user_id")
+    supabase.from("videos").select("id,title,thumbnail_url,video_url,views,likes,comments_count,supav_count,channel_name,user_id,is_reel,duration_seconds")
       .eq("user_id", user.id).order("created_at", { ascending: false })
       .then(({ data }) => setVideos((data ?? []) as MyVideo[]));
   };
