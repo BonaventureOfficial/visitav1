@@ -40,7 +40,7 @@ function ReelsPage() {
   const [reels, setReels] = useState<ReelRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useState(false);
   const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
@@ -158,7 +158,10 @@ function ReelItem({
 
   useEffect(() => {
     const v = videoRef.current;
-    if (v) v.muted = muted;
+    if (v) {
+      v.volume = 0.6;
+      v.muted = muted;
+    }
   }, [muted]);
 
   // Count view once past 30s (uses insert on video_views, unique per user/video)

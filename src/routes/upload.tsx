@@ -134,6 +134,10 @@ function UploadPage() {
       toast.error(t("reelTooLong"));
       return;
     }
+    if (kind === "video" && duration > 0 && duration <= REEL_MAX_SECONDS) {
+      toast.error("Une vidéo longue doit dépasser 2 minutes. Choisis Reel pour cette vidéo.");
+      return;
+    }
 
     setSubmitting(true);
     setProgress(5);
@@ -239,6 +243,11 @@ function UploadPage() {
             {kind === "reel" && duration > 0 && (
               <p className={`mt-2 text-[11px] ${duration > REEL_MAX_SECONDS ? "text-destructive" : "text-muted-foreground"}`}>
                 {Math.round(duration)}s / {REEL_MAX_SECONDS}s
+              </p>
+            )}
+            {kind === "video" && duration > 0 && duration <= REEL_MAX_SECONDS && (
+              <p className="mt-2 text-[11px] text-destructive">
+                Cette vidéo fait {Math.round(duration)}s : elle doit être publiée comme Reel.
               </p>
             )}
           </div>
