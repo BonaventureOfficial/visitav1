@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, UploadCloud, Film, Image as ImageIcon, X } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/lib/auth";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, CATEGORIES } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -12,7 +12,7 @@ export const Route = createFileRoute("/upload")({
   component: UploadPage,
 });
 
-type Cat = "emission" | "podcast" | "documentary";
+type Cat = "music" | "podcast" | "documentary" | "news" | "comedy" | "games" | "sports" | "kids" | "lifestyle" | "tech" | "emission";
 type Kind = "video" | "reel";
 
 const YEAR = 60 * 60 * 24 * 365;
@@ -335,18 +335,19 @@ function UploadPage() {
               {t("category")}
             </label>
             <div className="grid grid-cols-3 gap-2">
-              {(["emission", "podcast", "documentary"] as const).map((c) => (
+              {CATEGORIES.map((c) => (
                 <button
                   type="button"
-                  key={c}
-                  onClick={() => setCategory(c)}
-                  className={`rounded-xl border py-2.5 text-xs font-medium capitalize ${
-                    category === c
+                  key={c.id}
+                  onClick={() => setCategory(c.id as Cat)}
+                  className={`rounded-xl border py-2.5 text-xs font-medium capitalize flex items-center justify-center gap-1.5 ${
+                    category === c.id
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-card border-border text-muted-foreground"
                   }`}
                 >
-                  {c}
+                  <span>{c.icon}</span>
+                  <span>{c.id}</span>
                 </button>
               ))}
             </div>
