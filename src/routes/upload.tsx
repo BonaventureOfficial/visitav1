@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, UploadCloud, Film, Image as ImageIcon, X } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/lib/auth";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, CATEGORIES } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
