@@ -335,18 +335,19 @@ function UploadPage() {
               {t("category")}
             </label>
             <div className="grid grid-cols-3 gap-2">
-              {(["emission", "podcast", "documentary"] as const).map((c) => (
+              {CATEGORIES.map((c) => (
                 <button
                   type="button"
-                  key={c}
-                  onClick={() => setCategory(c)}
-                  className={`rounded-xl border py-2.5 text-xs font-medium capitalize ${
-                    category === c
+                  key={c.id}
+                  onClick={() => setCategory(c.id as Cat)}
+                  className={`rounded-xl border py-2.5 text-xs font-medium capitalize flex items-center justify-center gap-1.5 ${
+                    category === c.id
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-card border-border text-muted-foreground"
                   }`}
                 >
-                  {c}
+                  <span>{c.icon}</span>
+                  <span>{c.id}</span>
                 </button>
               ))}
             </div>
