@@ -12,7 +12,7 @@ export const Route = createFileRoute("/upload")({
   component: UploadPage,
 });
 
-type Cat = "emission" | "podcast" | "documentary";
+type Cat = "music" | "podcast" | "documentary" | "news" | "comedy" | "games" | "sports" | "kids" | "lifestyle" | "tech" | "emission";
 type Kind = "video" | "reel";
 
 const YEAR = 60 * 60 * 24 * 365;
