@@ -225,7 +225,6 @@ function ReelItem({
           playsInline
           loop
           muted={muted}
-          volume={0.6}
           preload="metadata"
           onClick={togglePlay}
           className="absolute inset-0 h-full w-full object-cover"
