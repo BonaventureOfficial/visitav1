@@ -3,9 +3,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Eye, Play, Film, Heart, MessageCircle, Share2, Send, Zap } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { CategoryMarquee } from "@/components/CategoryMarquee";
+import { CommentsThread } from "@/components/CommentsThread";
 import { FollowButton } from "@/components/FollowButton";
 import { SupavButton } from "@/components/SupavButton";
 import { useI18n } from "@/lib/i18n";
+
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCount } from "@/lib/format";
@@ -31,16 +33,25 @@ interface VideoRow {
 }
 
 export const Route = createFileRoute("/")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    channel: typeof search.channel === "string" ? search.channel : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Visita — Shows, Podcasts & Documentaries" },
       { name: "description", content: "Stream the best shows, podcasts and documentaries on Visita." },
+      { property: "og:title", content: "Visita — Shows, Podcasts & Documentaries" },
+      { property: "og:description", content: "Stream the best shows, podcasts and documentaries on Visita." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Home,
 });
 
 function Home() {
+  const { channel } = Route.useSearch();
+
   const { user } = useAuth();
   const [filter, setFilter] = useState<string>("all");
   const [videos, setVideos] = useState<VideoRow[]>([]);
