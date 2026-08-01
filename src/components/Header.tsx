@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
+import { ChannelSearch } from "@/components/ChannelSearch";
 import logo from "@/assets/logo.png";
 
 export function Header() {
@@ -10,12 +11,14 @@ export function Header() {
   return (
     <header className="fixed top-0 inset-x-0 z-50 glass border-b border-border/40">
       <div className="mx-auto max-w-7xl px-4 h-14 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 group" aria-label="Visita home">
+        <Link to="/" className="flex items-center gap-2 group shrink-0" aria-label="Visita home">
           <img src={logo} alt="" width={28} height={28} className="h-7 w-7" />
-          <span className="font-display font-bold text-lg tracking-tight">
+          <span className="font-display font-bold text-lg tracking-tight hidden xs:inline sm:inline">
             Visi<span className="text-primary">ta</span>
           </span>
         </Link>
+        {pathname === "/" && <ChannelSearch />}
+
         {showLang && (
           <div className="flex items-center gap-1 rounded-full bg-secondary p-1 text-xs font-medium">
             <button
