@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Heart, MessageCircle, Share2, Send, Volume2, VolumeX, Clapperboard } from "lucide-react";
+import { Heart, MessageCircle, Share2, Volume2, VolumeX, Clapperboard } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { FollowButton } from "@/components/FollowButton";
+import { CommentsThread } from "@/components/CommentsThread";
+
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -305,47 +307,7 @@ function ReelItem({
   );
 }
 
-interface CommentRow { id: string; user_id: string; body: string; created_at: string; author?: string }
-
 function CommentsSheet({ videoId, onClose, onAdded }: { videoId: string; onClose: () => void; onAdded: () => void }) {
-  const { user } = useAuth();
-  const [comments, setComments] = useState<CommentRow[]>([]);
-  const [body, setBody] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const { data } = await (supabase as any).from("video_comments")
-        .select("id,user_id,body,created_at").eq("video_id", videoId)
-        .order("created_at", { ascending: false }).limit(50);
-      if (!active) return;
-      const rows = (data ?? []) as CommentRow[];
-      const ids = Array.from(new Set(rows.map((c) => c.user_id)));
-      if (ids.length) {
-        const { data: profs } = await supabase.from("profiles").select("id,channel_name").in("id", ids);
-        const names = new Map((profs ?? []).map((p) => [p.id, p.channel_name]));
-        if (active) setComments(rows.map((c) => ({ ...c, author: names.get(c.user_id) ?? "Visita" })));
-      } else setComments(rows);
-    })();
-    return () => { active = false; };
-  }, [videoId]);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const clean = body.trim();
-    if (!user) { toast.error("Sign in to comment"); return; }
-    if (!clean) return;
-    setBusy(true);
-    const optimistic: CommentRow = { id: crypto.randomUUID(), user_id: user.id, body: clean, created_at: new Date().toISOString(), author: "You" };
-    setComments((rows) => [optimistic, ...rows]);
-    setBody("");
-    onAdded();
-    const { error } = await (supabase as any).from("video_comments").insert({ user_id: user.id, video_id: videoId, body: clean });
-    if (error) { toast.error(error.message); setComments((rows) => rows.filter((c) => c.id !== optimistic.id)); }
-    setBusy(false);
-  };
-
   return (
     <div className="absolute inset-0 z-20 flex flex-col justify-end" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50" />
@@ -354,29 +316,13 @@ function CommentsSheet({ videoId, onClose, onAdded }: { videoId: string; onClose
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-3 border-b border-border/60 text-center text-sm font-semibold">Comments</div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {comments.length === 0 && <p className="text-xs text-muted-foreground text-center">Be the first to comment.</p>}
-          {comments.map((c) => (
-            <p key={c.id} className="text-sm leading-snug">
-              <span className="font-semibold">{c.author ?? "Visita"}</span>{" "}
-              <span className="text-muted-foreground">{c.body}</span>
-            </p>
-          ))}
+        <div className="flex-1 min-h-0 p-4" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}>
+          <CommentsThread videoId={videoId} onAdded={onAdded} />
         </div>
-        <form onSubmit={submit} className="p-3 border-t border-border/60 flex items-center gap-2" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}>
-          <input
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            maxLength={500}
-            placeholder="Add a comment"
-            className="flex-1 min-w-0 rounded-full bg-secondary border border-border px-4 py-2 text-sm outline-none focus:border-primary"
-          />
-          <button disabled={busy || !body.trim()} className="h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-50" aria-label="Send">
-            <Send className="h-4 w-4" />
-          </button>
-        </form>
       </div>
     </div>
   );
 }
+
+
 

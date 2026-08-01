@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Play, Film, Heart, MessageCircle, Share2, Send, Zap } from "lucide-react";
+import { Eye, Play, Film, Heart, MessageCircle, Share2, Zap } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { CategoryMarquee } from "@/components/CategoryMarquee";
+import { CommentsThread } from "@/components/CommentsThread";
 import { FollowButton } from "@/components/FollowButton";
 import { SupavButton } from "@/components/SupavButton";
 import { useI18n } from "@/lib/i18n";
+
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCount } from "@/lib/format";
@@ -31,16 +33,25 @@ interface VideoRow {
 }
 
 export const Route = createFileRoute("/")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    channel: typeof search.channel === "string" ? search.channel : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Visita — Shows, Podcasts & Documentaries" },
       { name: "description", content: "Stream the best shows, podcasts and documentaries on Visita." },
+      { property: "og:title", content: "Visita — Shows, Podcasts & Documentaries" },
+      { property: "og:description", content: "Stream the best shows, podcasts and documentaries on Visita." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Home,
 });
 
 function Home() {
+  const { channel } = Route.useSearch();
+
   const { user } = useAuth();
   const [filter, setFilter] = useState<string>("all");
   const [videos, setVideos] = useState<VideoRow[]>([]);
@@ -75,10 +86,13 @@ function Home() {
       });
   }, [videos]);
 
-  const list = useMemo(
-    () => (filter === "all" ? videos : videos.filter((v) => v.category === filter)),
-    [filter, videos],
-  );
+  const list = useMemo(() => {
+    let rows = videos;
+    if (channel) rows = rows.filter((v) => v.user_id === channel);
+    if (filter !== "all") rows = rows.filter((v) => v.category === filter);
+    return rows;
+  }, [filter, videos, channel]);
+
 
   const { current } = usePlayer();
 
@@ -279,81 +293,14 @@ function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow;
 }
 
 
-interface CommentRow {
-  id: string;
-  user_id: string;
-  body: string;
-  created_at: string;
-  author?: string;
-}
-
 function CommentPanel({ videoId, onAdded }: { videoId: string; onAdded: () => void }) {
-  const { user } = useAuth();
-  const [comments, setComments] = useState<CommentRow[]>([]);
-  const [body, setBody] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const { data } = await (supabase as any)
-        .from("video_comments")
-        .select("id,user_id,body,created_at")
-        .eq("video_id", videoId)
-        .order("created_at", { ascending: false })
-        .limit(3);
-      if (!active) return;
-      const rows = (data ?? []) as CommentRow[];
-      const ids = Array.from(new Set(rows.map((c) => c.user_id)));
-      if (ids.length) {
-        const { data: profiles } = await supabase.from("profiles").select("id,channel_name").in("id", ids);
-        const names = new Map((profiles ?? []).map((p) => [p.id, p.channel_name]));
-        if (active) setComments(rows.map((c) => ({ ...c, author: names.get(c.user_id) ?? "Visita" })));
-      } else setComments(rows);
-    })();
-    return () => { active = false; };
-  }, [videoId]);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const clean = body.trim();
-    if (!user) { toast.error("Sign in to comment"); return; }
-    if (!clean) return;
-    setBusy(true);
-    const optimistic: CommentRow = { id: crypto.randomUUID(), user_id: user.id, body: clean, created_at: new Date().toISOString(), author: "You" };
-    setComments((rows) => [optimistic, ...rows].slice(0, 3));
-    setBody("");
-    onAdded();
-    const { error } = await (supabase as any).from("video_comments").insert({ user_id: user.id, video_id: videoId, body: clean });
-    if (error) { toast.error(error.message); setComments((rows) => rows.filter((c) => c.id !== optimistic.id)); }
-    setBusy(false);
-  };
-
   return (
     <div className="mt-3 border-t border-border/60 pt-3" onClick={(e) => e.stopPropagation()}>
-      <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
-        {comments.map((comment) => (
-          <p key={comment.id} className="text-xs leading-snug text-muted-foreground">
-            <span className="font-semibold text-foreground">{comment.author ?? "Visita"}</span> {comment.body}
-          </p>
-        ))}
-      </div>
-      <form onSubmit={submit} className="mt-3 flex items-center gap-2">
-        <input
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          maxLength={500}
-          placeholder="Ajouter un commentaire"
-          className="min-w-0 flex-1 rounded-full bg-secondary border border-border px-3 py-2 text-xs outline-none focus:border-primary"
-        />
-        <button disabled={busy || !body.trim()} className="h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-50" aria-label="Send comment">
-          <Send className="h-4 w-4" />
-        </button>
-      </form>
+      <CommentsThread videoId={videoId} limit={20} compact onAdded={onAdded} />
     </div>
   );
 }
+
 
 function EmptyState() {
   const { t } = useI18n();
