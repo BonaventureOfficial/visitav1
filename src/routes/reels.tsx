@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Heart, MessageCircle, Share2, Send, Volume2, VolumeX, Clapperboard } from "lucide-react";
+import { Heart, MessageCircle, Share2, Volume2, VolumeX, Clapperboard } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { FollowButton } from "@/components/FollowButton";
+import { CommentsThread } from "@/components/CommentsThread";
+
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
