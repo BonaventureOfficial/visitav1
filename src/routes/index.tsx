@@ -86,10 +86,13 @@ function Home() {
       });
   }, [videos]);
 
-  const list = useMemo(
-    () => (filter === "all" ? videos : videos.filter((v) => v.category === filter)),
-    [filter, videos],
-  );
+  const list = useMemo(() => {
+    let rows = videos;
+    if (channel) rows = rows.filter((v) => v.user_id === channel);
+    if (filter !== "all") rows = rows.filter((v) => v.category === filter);
+    return rows;
+  }, [filter, videos, channel]);
+
 
   const { current } = usePlayer();
 
