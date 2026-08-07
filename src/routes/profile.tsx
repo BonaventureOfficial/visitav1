@@ -1,18 +1,39 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { LogOut, User as UserIcon, Eye, Play, Film, Camera, Loader2, Zap, Image as ImageIcon, Trash2, X } from "lucide-react";
+import { User as UserIcon, Eye, Play, Film, Camera, Loader2, Zap, Image as ImageIcon, Trash2, X, Settings as SettingsIcon, Pencil, Check, Lock, CalendarDays, Mail } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCount } from "@/lib/format";
+import { maskEmail } from "@/lib/mask";
+import { setMyAvatar } from "@/lib/avatar-store";
 import { usePlayer } from "@/lib/player";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/profile")({
-  head: () => ({ meta: [{ title: "Profile — Visita" }] }),
+  head: () => ({
+    meta: [
+      { title: "Profile — Visita" },
+      { name: "description", content: "Your Visita channel: bio, stats and video library." },
+      { property: "og:title", content: "Profile — Visita" },
+      { property: "og:description", content: "Your Visita channel: bio, stats and video library." },
+      { property: "og:type", content: "profile" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: ProfilePage,
 });
+
+const LOCK_DAYS = 90;
+const LOCK_MS = LOCK_DAYS * 24 * 60 * 60 * 1000;
+
+function lockInfo(updatedAt: string | null) {
+  if (!updatedAt) return { locked: false, daysLeft: 0 };
+  const next = new Date(updatedAt).getTime() + LOCK_MS;
+  const diff = next - Date.now();
+  return { locked: diff > 0, daysLeft: Math.ceil(diff / (24 * 60 * 60 * 1000)) };
+}
 
 interface MyVideo {
   id: string; title: string; thumbnail_url: string | null; video_url: string | null;
@@ -27,6 +48,15 @@ function ProfilePage() {
   const navigate = useNavigate();
   const { play } = usePlayer();
   const [channelName, setChannelName] = useState<string>("");
+  const [bio, setBio] = useState<string>("");
+  const [joinedAt, setJoinedAt] = useState<string | null>(null);
+  const [nameUpdatedAt, setNameUpdatedAt] = useState<string | null>(null);
+  const [bioUpdatedAt, setBioUpdatedAt] = useState<string | null>(null);
+  const [editName, setEditName] = useState(false);
+  const [editBio, setEditBio] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [bioDraft, setBioDraft] = useState("");
+  const [saving, setSaving] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -36,6 +66,9 @@ function ProfilePage() {
   const [followerCount, setFollowerCount] = useState(0);
   const [selected, setSelected] = useState<MyVideo | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const nameLock = lockInfo(nameUpdatedAt);
+  const bioLock = lockInfo(bioUpdatedAt);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth" });
@@ -50,15 +83,52 @@ function ProfilePage() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("channel_name,avatar_url").eq("id", user.id).maybeSingle()
+    supabase.from("profiles")
+      .select("channel_name,avatar_url,bio,created_at,channel_name_updated_at,bio_updated_at")
+      .eq("id", user.id).maybeSingle()
       .then(({ data }) => {
-        if (data?.channel_name) setChannelName(data.channel_name);
-        if ((data as any)?.avatar_url) setAvatarUrl((data as any).avatar_url);
+        const p = data as any;
+        if (p?.channel_name) { setChannelName(p.channel_name); setNameDraft(p.channel_name); }
+        if (p?.avatar_url) { setAvatarUrl(p.avatar_url); setMyAvatar(p.avatar_url); }
+        if (p?.bio) { setBio(p.bio); setBioDraft(p.bio); }
+        setJoinedAt(p?.created_at ?? null);
+        setNameUpdatedAt(p?.channel_name_updated_at ?? null);
+        setBioUpdatedAt(p?.bio_updated_at ?? null);
       });
     reloadVideos();
     supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", user.id)
       .then(({ count }) => setFollowerCount(count ?? 0));
   }, [user]);
+
+  const saveName = async () => {
+    if (!user) return;
+    const value = nameDraft.trim();
+    if (value.length < 3 || value.length > 40) { toast.error("3 to 40 characters"); return; }
+    if (value === channelName) { setEditName(false); return; }
+    setSaving(true);
+    const now = new Date().toISOString();
+    const { error } = await supabase.from("profiles")
+      .update({ channel_name: value, channel_name_updated_at: now } as any).eq("id", user.id);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    setChannelName(value); setNameUpdatedAt(now); setEditName(false);
+    toast.success(`Channel name updated — locked for ${LOCK_DAYS} days`);
+  };
+
+  const saveBio = async () => {
+    if (!user) return;
+    const value = bioDraft.trim().slice(0, 200);
+    if (value === bio) { setEditBio(false); return; }
+    setSaving(true);
+    const now = new Date().toISOString();
+    const { error } = await supabase.from("profiles")
+      .update({ bio: value, bio_updated_at: now } as any).eq("id", user.id);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    setBio(value); setBioUpdatedAt(now); setEditBio(false);
+    toast.success(`Bio updated — locked for ${LOCK_DAYS} days`);
+  };
+
 
   const onPickAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -81,6 +151,8 @@ function ProfilePage() {
       const { error: pErr } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", user.id);
       if (pErr) throw pErr;
       setAvatarUrl(url);
+      setMyAvatar(url);
+
       toast.success("✓");
     } catch (err: any) {
       toast.error(err?.message ?? "Upload failed");
@@ -136,12 +208,6 @@ function ProfilePage() {
     }
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    toast.success("👋");
-    navigate({ to: "/" });
-  };
-
   if (!user) return null;
 
   const totals = videos.reduce(
@@ -155,38 +221,134 @@ function ProfilePage() {
   return (
     <AppLayout>
       <section className="mx-auto max-w-3xl px-4 pt-6">
-        <div className="rounded-3xl bg-card border border-border p-5 flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="relative h-16 w-16 rounded-full overflow-hidden gradient-brand flex items-center justify-center text-primary-foreground shadow-xl shadow-primary/30 group shrink-0"
-            aria-label="Change avatar"
-          >
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
-            ) : (
-              <UserIcon className="h-7 w-7" />
-            )}
-            <span className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-              {uploading ? <Loader2 className="h-5 w-5 animate-spin text-white" /> : <Camera className="h-5 w-5 text-white" />}
-            </span>
-            {uploading && (
-              <span className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                <Loader2 className="h-5 w-5 animate-spin text-white" />
-              </span>
-            )}
-          </button>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
-          <div className="flex-1 min-w-0">
-            <h1 className="font-display text-xl font-bold truncate">{channelName || t("myChannel")}</h1>
-            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-            <p className="text-xs text-primary mt-0.5">{formatCount(followerCount)} followers</p>
+        <div className="rounded-3xl bg-card border border-border p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                Joined{" "}
+                {joinedAt
+                  ? new Date(joinedAt).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+                  : "—"}
+              </p>
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5 text-primary" /> {maskEmail(user.email)}
+              </p>
+
+              {editName ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    maxLength={40}
+                    className="flex-1 min-w-0 rounded-xl bg-secondary border border-border px-3 py-2 text-sm outline-none focus:border-primary"
+                    placeholder="Channel name"
+                  />
+                  <button onClick={saveName} disabled={saving} className="rounded-xl bg-primary text-primary-foreground p-2 disabled:opacity-60" aria-label="Save name">
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  </button>
+                  <button onClick={() => { setEditName(false); setNameDraft(channelName); }} className="rounded-xl bg-secondary p-2" aria-label="Cancel">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <h1 className="font-display text-xl font-bold truncate">{channelName || t("myChannel")}</h1>
+                  <button
+                    onClick={() => (nameLock.locked ? toast.error(`Name change available in ${nameLock.daysLeft} days`) : setEditName(true))}
+                    className="shrink-0 rounded-full p-1.5 bg-secondary text-muted-foreground hover:text-foreground"
+                    aria-label="Edit channel name"
+                  >
+                    {nameLock.locked ? <Lock className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+              )}
+              {nameLock.locked && !editName && (
+                <p className="text-[10px] text-muted-foreground">Editable again in {nameLock.daysLeft} days</p>
+              )}
+
+              <p className="text-xs text-primary">{formatCount(followerCount)} followers</p>
+            </div>
+
+            <Link
+              to="/settings"
+              className="rounded-full p-2.5 bg-secondary hover:bg-accent text-muted-foreground hover:text-foreground shrink-0"
+              aria-label="Settings"
+            >
+              <SettingsIcon className="h-4 w-4" />
+            </Link>
           </div>
-          <button onClick={signOut} className="rounded-full p-2.5 bg-secondary hover:bg-accent text-muted-foreground hover:text-foreground" aria-label={t("signOut")}>
-            <LogOut className="h-4 w-4" />
-          </button>
+
+          <div className="mt-3 rounded-2xl border border-border bg-secondary/40 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Bio</p>
+              {!editBio && (
+                <button
+                  onClick={() => (bioLock.locked ? toast.error(`Bio change available in ${bioLock.daysLeft} days`) : setEditBio(true))}
+                  className="rounded-full p-1.5 text-muted-foreground hover:text-foreground"
+                  aria-label="Edit bio"
+                >
+                  {bioLock.locked ? <Lock className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+                </button>
+              )}
+            </div>
+            {editBio ? (
+              <div className="mt-2 space-y-2">
+                <textarea
+                  value={bioDraft}
+                  onChange={(e) => setBioDraft(e.target.value.slice(0, 200))}
+                  rows={3}
+                  className="w-full rounded-xl bg-background border border-border px-3 py-2 text-sm outline-none focus:border-primary resize-none"
+                  placeholder="Tell viewers about your channel…"
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-muted-foreground">{bioDraft.length}/200</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => { setEditBio(false); setBioDraft(bio); }} className="rounded-xl bg-secondary px-3 py-1.5 text-xs font-semibold">Cancel</button>
+                    <button onClick={saveBio} disabled={saving} className="rounded-xl bg-primary text-primary-foreground px-3 py-1.5 text-xs font-semibold disabled:opacity-60">
+                      {saving ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="mt-1 text-sm text-foreground/90 whitespace-pre-wrap">
+                  {bio || <span className="text-muted-foreground">No bio yet.</span>}
+                </p>
+                {bioLock.locked && (
+                  <p className="mt-1 text-[10px] text-muted-foreground">Editable again in {bioLock.daysLeft} days</p>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="relative h-24 w-24 rounded-full overflow-hidden gradient-brand flex items-center justify-center text-primary-foreground shadow-xl shadow-primary/30 group"
+              aria-label="Change avatar"
+            >
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              ) : (
+                <UserIcon className="h-9 w-9" />
+              )}
+              <span className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                <Camera className="h-5 w-5 text-white" />
+              </span>
+              {uploading && (
+                <span className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <Loader2 className="h-5 w-5 animate-spin text-white" />
+                </span>
+              )}
+            </button>
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
         </div>
+
 
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
           {[

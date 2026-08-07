@@ -33,9 +33,9 @@ interface VideoRow {
 }
 
 export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    channel: typeof search.channel === "string" ? search.channel : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { channel?: string } =>
+    typeof search.channel === "string" ? { channel: search.channel } : {},
+
   head: () => ({
     meta: [
       { title: "Visita — Shows, Podcasts & Documentaries" },
