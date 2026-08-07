@@ -151,6 +151,8 @@ function ProfilePage() {
       const { error: pErr } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", user.id);
       if (pErr) throw pErr;
       setAvatarUrl(url);
+      setMyAvatar(url);
+
       toast.success("✓");
     } catch (err: any) {
       toast.error(err?.message ?? "Upload failed");
