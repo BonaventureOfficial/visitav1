@@ -206,12 +206,6 @@ function ProfilePage() {
     }
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    toast.success("👋");
-    navigate({ to: "/" });
-  };
-
   if (!user) return null;
 
   const totals = videos.reduce(
@@ -225,38 +219,134 @@ function ProfilePage() {
   return (
     <AppLayout>
       <section className="mx-auto max-w-3xl px-4 pt-6">
-        <div className="rounded-3xl bg-card border border-border p-5 flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="relative h-16 w-16 rounded-full overflow-hidden gradient-brand flex items-center justify-center text-primary-foreground shadow-xl shadow-primary/30 group shrink-0"
-            aria-label="Change avatar"
-          >
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
-            ) : (
-              <UserIcon className="h-7 w-7" />
-            )}
-            <span className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-              {uploading ? <Loader2 className="h-5 w-5 animate-spin text-white" /> : <Camera className="h-5 w-5 text-white" />}
-            </span>
-            {uploading && (
-              <span className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                <Loader2 className="h-5 w-5 animate-spin text-white" />
-              </span>
-            )}
-          </button>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
-          <div className="flex-1 min-w-0">
-            <h1 className="font-display text-xl font-bold truncate">{channelName || t("myChannel")}</h1>
-            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-            <p className="text-xs text-primary mt-0.5">{formatCount(followerCount)} followers</p>
+        <div className="rounded-3xl bg-card border border-border p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                Joined{" "}
+                {joinedAt
+                  ? new Date(joinedAt).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+                  : "—"}
+              </p>
+              <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5 text-primary" /> {maskEmail(user.email)}
+              </p>
+
+              {editName ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    maxLength={40}
+                    className="flex-1 min-w-0 rounded-xl bg-secondary border border-border px-3 py-2 text-sm outline-none focus:border-primary"
+                    placeholder="Channel name"
+                  />
+                  <button onClick={saveName} disabled={saving} className="rounded-xl bg-primary text-primary-foreground p-2 disabled:opacity-60" aria-label="Save name">
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  </button>
+                  <button onClick={() => { setEditName(false); setNameDraft(channelName); }} className="rounded-xl bg-secondary p-2" aria-label="Cancel">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <h1 className="font-display text-xl font-bold truncate">{channelName || t("myChannel")}</h1>
+                  <button
+                    onClick={() => (nameLock.locked ? toast.error(`Name change available in ${nameLock.daysLeft} days`) : setEditName(true))}
+                    className="shrink-0 rounded-full p-1.5 bg-secondary text-muted-foreground hover:text-foreground"
+                    aria-label="Edit channel name"
+                  >
+                    {nameLock.locked ? <Lock className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+              )}
+              {nameLock.locked && !editName && (
+                <p className="text-[10px] text-muted-foreground">Editable again in {nameLock.daysLeft} days</p>
+              )}
+
+              <p className="text-xs text-primary">{formatCount(followerCount)} followers</p>
+            </div>
+
+            <Link
+              to="/settings"
+              className="rounded-full p-2.5 bg-secondary hover:bg-accent text-muted-foreground hover:text-foreground shrink-0"
+              aria-label="Settings"
+            >
+              <SettingsIcon className="h-4 w-4" />
+            </Link>
           </div>
-          <button onClick={signOut} className="rounded-full p-2.5 bg-secondary hover:bg-accent text-muted-foreground hover:text-foreground" aria-label={t("signOut")}>
-            <LogOut className="h-4 w-4" />
-          </button>
+
+          <div className="mt-3 rounded-2xl border border-border bg-secondary/40 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Bio</p>
+              {!editBio && (
+                <button
+                  onClick={() => (bioLock.locked ? toast.error(`Bio change available in ${bioLock.daysLeft} days`) : setEditBio(true))}
+                  className="rounded-full p-1.5 text-muted-foreground hover:text-foreground"
+                  aria-label="Edit bio"
+                >
+                  {bioLock.locked ? <Lock className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+                </button>
+              )}
+            </div>
+            {editBio ? (
+              <div className="mt-2 space-y-2">
+                <textarea
+                  value={bioDraft}
+                  onChange={(e) => setBioDraft(e.target.value.slice(0, 200))}
+                  rows={3}
+                  className="w-full rounded-xl bg-background border border-border px-3 py-2 text-sm outline-none focus:border-primary resize-none"
+                  placeholder="Tell viewers about your channel…"
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-muted-foreground">{bioDraft.length}/200</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => { setEditBio(false); setBioDraft(bio); }} className="rounded-xl bg-secondary px-3 py-1.5 text-xs font-semibold">Cancel</button>
+                    <button onClick={saveBio} disabled={saving} className="rounded-xl bg-primary text-primary-foreground px-3 py-1.5 text-xs font-semibold disabled:opacity-60">
+                      {saving ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="mt-1 text-sm text-foreground/90 whitespace-pre-wrap">
+                  {bio || <span className="text-muted-foreground">No bio yet.</span>}
+                </p>
+                {bioLock.locked && (
+                  <p className="mt-1 text-[10px] text-muted-foreground">Editable again in {bioLock.daysLeft} days</p>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="relative h-24 w-24 rounded-full overflow-hidden gradient-brand flex items-center justify-center text-primary-foreground shadow-xl shadow-primary/30 group"
+              aria-label="Change avatar"
+            >
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              ) : (
+                <UserIcon className="h-9 w-9" />
+              )}
+              <span className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                <Camera className="h-5 w-5 text-white" />
+              </span>
+              {uploading && (
+                <span className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <Loader2 className="h-5 w-5 animate-spin text-white" />
+                </span>
+              )}
+            </button>
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickAvatar} />
         </div>
+
 
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
           {[
