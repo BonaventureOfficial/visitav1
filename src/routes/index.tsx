@@ -79,13 +79,19 @@ function Home() {
   useEffect(() => {
     const ownerIds = Array.from(new Set(videos.map((v) => v.user_id).filter(Boolean))) as string[];
     if (ownerIds.length === 0) return;
-    supabase.from("profiles").select("id,avatar_url").in("id", ownerIds)
+    supabase.from("profiles").select("id,avatar_url,bio,created_at").in("id", ownerIds)
       .then(({ data }) => {
         const m = new Map<string, string>();
-        (data ?? []).forEach((p: any) => { if ((p as any).avatar_url) m.set(p.id, (p as any).avatar_url); });
+        const info = new Map<string, { bio: string | null; created_at: string | null }>();
+        (data ?? []).forEach((p: any) => {
+          if (p.avatar_url) m.set(p.id, p.avatar_url);
+          info.set(p.id, { bio: p.bio ?? null, created_at: p.created_at ?? null });
+        });
         setAvatars(m);
+        setProfileInfo(info);
       });
   }, [videos]);
+
 
   const list = useMemo(() => {
     let rows = videos;
