@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Play, Film, Heart, MessageCircle, Share2, Zap } from "lucide-react";
+import { Eye, Play, Film, Heart, MessageCircle, Share2, Zap, CalendarDays } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { CategoryMarquee } from "@/components/CategoryMarquee";
 import { CommentsThread } from "@/components/CommentsThread";
@@ -202,7 +202,7 @@ function NowPlayingPinned() {
 }
 
 
-function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow; initialLiked: boolean; avatarUrl: string | null; onAvatarClick: (url: string | null, name: string | null) => void }) {
+function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow; initialLiked: boolean; avatarUrl: string | null; onAvatarClick: (url: string | null, name: string | null, userId?: string | null) => void }) {
   const { play, current } = usePlayer();
   const { user } = useAuth();
   const isActive = current?.id === v.id;
@@ -280,7 +280,7 @@ function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow;
         <div className="mt-2 flex items-center gap-2">
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); onAvatarClick(avatarUrl, v.channel_name); }}
+            onClick={(e) => { e.stopPropagation(); onAvatarClick(avatarUrl, v.channel_name, v.user_id); }}
             disabled={!avatarUrl}
             className="h-6 w-6 rounded-full overflow-hidden gradient-brand flex items-center justify-center text-primary-foreground text-[10px] font-bold shrink-0 disabled:cursor-default hover:ring-2 hover:ring-primary/60 transition"
             aria-label={avatarUrl ? "View profile picture" : "No avatar"}
