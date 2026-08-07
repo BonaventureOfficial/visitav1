@@ -1,18 +1,39 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { LogOut, User as UserIcon, Eye, Play, Film, Camera, Loader2, Zap, Image as ImageIcon, Trash2, X } from "lucide-react";
+import { User as UserIcon, Eye, Play, Film, Camera, Loader2, Zap, Image as ImageIcon, Trash2, X, Settings as SettingsIcon, Pencil, Check, Lock, CalendarDays, Mail } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCount } from "@/lib/format";
+import { maskEmail } from "@/lib/mask";
+import { setMyAvatar } from "@/lib/avatar-store";
 import { usePlayer } from "@/lib/player";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/profile")({
-  head: () => ({ meta: [{ title: "Profile — Visita" }] }),
+  head: () => ({
+    meta: [
+      { title: "Profile — Visita" },
+      { name: "description", content: "Your Visita channel: bio, stats and video library." },
+      { property: "og:title", content: "Profile — Visita" },
+      { property: "og:description", content: "Your Visita channel: bio, stats and video library." },
+      { property: "og:type", content: "profile" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: ProfilePage,
 });
+
+const LOCK_DAYS = 90;
+const LOCK_MS = LOCK_DAYS * 24 * 60 * 60 * 1000;
+
+function lockInfo(updatedAt: string | null) {
+  if (!updatedAt) return { locked: false, daysLeft: 0 };
+  const next = new Date(updatedAt).getTime() + LOCK_MS;
+  const diff = next - Date.now();
+  return { locked: diff > 0, daysLeft: Math.ceil(diff / (24 * 60 * 60 * 1000)) };
+}
 
 interface MyVideo {
   id: string; title: string; thumbnail_url: string | null; video_url: string | null;
@@ -27,6 +48,15 @@ function ProfilePage() {
   const navigate = useNavigate();
   const { play } = usePlayer();
   const [channelName, setChannelName] = useState<string>("");
+  const [bio, setBio] = useState<string>("");
+  const [joinedAt, setJoinedAt] = useState<string | null>(null);
+  const [nameUpdatedAt, setNameUpdatedAt] = useState<string | null>(null);
+  const [bioUpdatedAt, setBioUpdatedAt] = useState<string | null>(null);
+  const [editName, setEditName] = useState(false);
+  const [editBio, setEditBio] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [bioDraft, setBioDraft] = useState("");
+  const [saving, setSaving] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -36,6 +66,9 @@ function ProfilePage() {
   const [followerCount, setFollowerCount] = useState(0);
   const [selected, setSelected] = useState<MyVideo | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const nameLock = lockInfo(nameUpdatedAt);
+  const bioLock = lockInfo(bioUpdatedAt);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth" });
@@ -50,15 +83,52 @@ function ProfilePage() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("channel_name,avatar_url").eq("id", user.id).maybeSingle()
+    supabase.from("profiles")
+      .select("channel_name,avatar_url,bio,created_at,channel_name_updated_at,bio_updated_at")
+      .eq("id", user.id).maybeSingle()
       .then(({ data }) => {
-        if (data?.channel_name) setChannelName(data.channel_name);
-        if ((data as any)?.avatar_url) setAvatarUrl((data as any).avatar_url);
+        const p = data as any;
+        if (p?.channel_name) { setChannelName(p.channel_name); setNameDraft(p.channel_name); }
+        if (p?.avatar_url) { setAvatarUrl(p.avatar_url); setMyAvatar(p.avatar_url); }
+        if (p?.bio) { setBio(p.bio); setBioDraft(p.bio); }
+        setJoinedAt(p?.created_at ?? null);
+        setNameUpdatedAt(p?.channel_name_updated_at ?? null);
+        setBioUpdatedAt(p?.bio_updated_at ?? null);
       });
     reloadVideos();
     supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", user.id)
       .then(({ count }) => setFollowerCount(count ?? 0));
   }, [user]);
+
+  const saveName = async () => {
+    if (!user) return;
+    const value = nameDraft.trim();
+    if (value.length < 3 || value.length > 40) { toast.error("3 to 40 characters"); return; }
+    if (value === channelName) { setEditName(false); return; }
+    setSaving(true);
+    const now = new Date().toISOString();
+    const { error } = await supabase.from("profiles")
+      .update({ channel_name: value, channel_name_updated_at: now } as any).eq("id", user.id);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    setChannelName(value); setNameUpdatedAt(now); setEditName(false);
+    toast.success(`Channel name updated — locked for ${LOCK_DAYS} days`);
+  };
+
+  const saveBio = async () => {
+    if (!user) return;
+    const value = bioDraft.trim().slice(0, 200);
+    if (value === bio) { setEditBio(false); return; }
+    setSaving(true);
+    const now = new Date().toISOString();
+    const { error } = await supabase.from("profiles")
+      .update({ bio: value, bio_updated_at: now } as any).eq("id", user.id);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    setBio(value); setBioUpdatedAt(now); setEditBio(false);
+    toast.success(`Bio updated — locked for ${LOCK_DAYS} days`);
+  };
+
 
   const onPickAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
