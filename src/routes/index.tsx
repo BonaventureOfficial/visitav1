@@ -58,7 +58,8 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
-  const [bigAvatar, setBigAvatar] = useState<{ url: string; name: string } | null>(null);
+  const [profileInfo, setProfileInfo] = useState<Map<string, { bio: string | null; created_at: string | null }>>(new Map());
+  const [bigAvatar, setBigAvatar] = useState<{ url: string; name: string; bio: string | null; joined: string | null } | null>(null);
 
   useEffect(() => {
     (supabase as any).from("videos")
