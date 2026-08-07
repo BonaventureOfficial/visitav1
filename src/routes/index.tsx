@@ -103,8 +103,10 @@ function Home() {
 
   const { current } = usePlayer();
 
-  const openAvatar = (url: string | null, name: string | null) => {
-    if (url) setBigAvatar({ url, name: name ?? "" });
+  const openAvatar = (url: string | null, name: string | null, userId?: string | null) => {
+    if (!url) return;
+    const info = userId ? profileInfo.get(userId) : undefined;
+    setBigAvatar({ url, name: name ?? "", bio: info?.bio ?? null, joined: info?.created_at ?? null });
   };
 
   return (
