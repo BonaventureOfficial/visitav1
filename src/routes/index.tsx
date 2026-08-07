@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Eye, Play, Film, Heart, MessageCircle, Share2, Zap } from "lucide-react";
+import { Eye, Play, Film, Heart, MessageCircle, Share2, Zap, CalendarDays } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { CategoryMarquee } from "@/components/CategoryMarquee";
 import { CommentsThread } from "@/components/CommentsThread";
@@ -58,7 +58,8 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
-  const [bigAvatar, setBigAvatar] = useState<{ url: string; name: string } | null>(null);
+  const [profileInfo, setProfileInfo] = useState<Map<string, { bio: string | null; created_at: string | null }>>(new Map());
+  const [bigAvatar, setBigAvatar] = useState<{ url: string; name: string; bio: string | null; joined: string | null } | null>(null);
 
   useEffect(() => {
     (supabase as any).from("videos")
@@ -78,13 +79,19 @@ function Home() {
   useEffect(() => {
     const ownerIds = Array.from(new Set(videos.map((v) => v.user_id).filter(Boolean))) as string[];
     if (ownerIds.length === 0) return;
-    supabase.from("profiles").select("id,avatar_url").in("id", ownerIds)
+    supabase.from("profiles").select("id,avatar_url,bio,created_at").in("id", ownerIds)
       .then(({ data }) => {
         const m = new Map<string, string>();
-        (data ?? []).forEach((p: any) => { if ((p as any).avatar_url) m.set(p.id, (p as any).avatar_url); });
+        const info = new Map<string, { bio: string | null; created_at: string | null }>();
+        (data ?? []).forEach((p: any) => {
+          if (p.avatar_url) m.set(p.id, p.avatar_url);
+          info.set(p.id, { bio: p.bio ?? null, created_at: p.created_at ?? null });
+        });
         setAvatars(m);
+        setProfileInfo(info);
       });
   }, [videos]);
+
 
   const list = useMemo(() => {
     let rows = videos;
@@ -96,8 +103,10 @@ function Home() {
 
   const { current } = usePlayer();
 
-  const openAvatar = (url: string | null, name: string | null) => {
-    if (url) setBigAvatar({ url, name: name ?? "" });
+  const openAvatar = (url: string | null, name: string | null, userId?: string | null) => {
+    if (!url) return;
+    const info = userId ? profileInfo.get(userId) : undefined;
+    setBigAvatar({ url, name: name ?? "", bio: info?.bio ?? null, joined: info?.created_at ?? null });
   };
 
   return (
@@ -131,15 +140,27 @@ function Home() {
           className="fixed inset-0 z-[90] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6"
           onClick={() => setBigAvatar(null)}
         >
-          <div className="flex flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
+          <div className="flex flex-col items-center gap-4 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
             <img
               src={bigAvatar.url}
               alt={bigAvatar.name}
-              className="max-h-[80vh] max-w-[90vw] rounded-3xl object-contain shadow-2xl border-2 border-primary/40"
+              className="max-h-[55vh] max-w-[90vw] rounded-3xl object-contain shadow-2xl border-2 border-primary/40"
             />
-            {bigAvatar.name && (
-              <p className="text-white font-semibold text-sm">{bigAvatar.name}</p>
-            )}
+            <div className="w-full rounded-2xl bg-card border border-border p-4 text-center space-y-2">
+              {bigAvatar.name && (
+                <p className="font-display text-base font-bold">{bigAvatar.name}</p>
+              )}
+              <p className="text-[11px] text-muted-foreground flex items-center justify-center gap-1.5">
+                <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                Joined{" "}
+                {bigAvatar.joined
+                  ? new Date(bigAvatar.joined).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+                  : "—"}
+              </p>
+              <p className="text-sm text-foreground/90 whitespace-pre-wrap">
+                {bigAvatar.bio || <span className="text-muted-foreground">No bio yet.</span>}
+              </p>
+            </div>
             <button
               onClick={() => setBigAvatar(null)}
               className="rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-4 py-2"
@@ -147,6 +168,7 @@ function Home() {
               Close
             </button>
           </div>
+
         </div>
       )}
     </AppLayout>
@@ -180,7 +202,7 @@ function NowPlayingPinned() {
 }
 
 
-function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow; initialLiked: boolean; avatarUrl: string | null; onAvatarClick: (url: string | null, name: string | null) => void }) {
+function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow; initialLiked: boolean; avatarUrl: string | null; onAvatarClick: (url: string | null, name: string | null, userId?: string | null) => void }) {
   const { play, current } = usePlayer();
   const { user } = useAuth();
   const isActive = current?.id === v.id;
@@ -258,7 +280,7 @@ function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow;
         <div className="mt-2 flex items-center gap-2">
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); onAvatarClick(avatarUrl, v.channel_name); }}
+            onClick={(e) => { e.stopPropagation(); onAvatarClick(avatarUrl, v.channel_name, v.user_id); }}
             disabled={!avatarUrl}
             className="h-6 w-6 rounded-full overflow-hidden gradient-brand flex items-center justify-center text-primary-foreground text-[10px] font-bold shrink-0 disabled:cursor-default hover:ring-2 hover:ring-primary/60 transition"
             aria-label={avatarUrl ? "View profile picture" : "No avatar"}
