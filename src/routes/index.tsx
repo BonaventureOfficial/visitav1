@@ -140,15 +140,27 @@ function Home() {
           className="fixed inset-0 z-[90] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6"
           onClick={() => setBigAvatar(null)}
         >
-          <div className="flex flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
+          <div className="flex flex-col items-center gap-4 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
             <img
               src={bigAvatar.url}
               alt={bigAvatar.name}
-              className="max-h-[80vh] max-w-[90vw] rounded-3xl object-contain shadow-2xl border-2 border-primary/40"
+              className="max-h-[55vh] max-w-[90vw] rounded-3xl object-contain shadow-2xl border-2 border-primary/40"
             />
-            {bigAvatar.name && (
-              <p className="text-white font-semibold text-sm">{bigAvatar.name}</p>
-            )}
+            <div className="w-full rounded-2xl bg-card border border-border p-4 text-center space-y-2">
+              {bigAvatar.name && (
+                <p className="font-display text-base font-bold">{bigAvatar.name}</p>
+              )}
+              <p className="text-[11px] text-muted-foreground flex items-center justify-center gap-1.5">
+                <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                Joined{" "}
+                {bigAvatar.joined
+                  ? new Date(bigAvatar.joined).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+                  : "—"}
+              </p>
+              <p className="text-sm text-foreground/90 whitespace-pre-wrap">
+                {bigAvatar.bio || <span className="text-muted-foreground">No bio yet.</span>}
+              </p>
+            </div>
             <button
               onClick={() => setBigAvatar(null)}
               className="rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-4 py-2"
@@ -156,6 +168,7 @@ function Home() {
               Close
             </button>
           </div>
+
         </div>
       )}
     </AppLayout>
