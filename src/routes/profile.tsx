@@ -118,6 +118,7 @@ function ProfilePage() {
         setBioUpdatedAt(p?.bio_updated_at ?? null);
       });
     reloadVideos();
+    loadHistory();
     supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", user.id)
       .then(({ count }) => setFollowerCount(count ?? 0));
   }, [user]);
