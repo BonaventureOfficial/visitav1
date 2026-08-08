@@ -231,6 +231,28 @@ function ProfilePage() {
     }
   };
 
+  const saveMeta = async () => {
+    if (!selected || !user) return;
+    const title = titleDraft.trim();
+    if (title.length < 3) { toast.error("Titre trop court"); return; }
+    const description = descDraft.trim().slice(0, 2000);
+    setBusy(true);
+    try {
+      const { error } = await supabase.from("videos")
+        .update({ title, description }).eq("id", selected.id);
+      if (error) throw error;
+      toast.success("Vidéo mise à jour");
+      setSelected({ ...selected, title, description });
+      setEditMeta(false);
+      reloadVideos();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Échec de la mise à jour");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+
   if (!user) return null;
 
   const totals = videos.reduce(
