@@ -66,6 +66,10 @@ function ProfilePage() {
   const [followerCount, setFollowerCount] = useState(0);
   const [selected, setSelected] = useState<MyVideo | null>(null);
   const [busy, setBusy] = useState(false);
+  const [editMeta, setEditMeta] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [descDraft, setDescDraft] = useState("");
+  const [history, setHistory] = useState<MyVideo[]>([]);
 
   const nameLock = lockInfo(nameUpdatedAt);
   const bioLock = lockInfo(bioUpdatedAt);
@@ -76,9 +80,27 @@ function ProfilePage() {
 
   const reloadVideos = () => {
     if (!user) return;
-    supabase.from("videos").select("id,title,thumbnail_url,video_url,views,likes,comments_count,supav_count,channel_name,user_id,is_reel,duration_seconds")
+    supabase.from("videos").select("id,title,description,thumbnail_url,video_url,views,likes,comments_count,supav_count,channel_name,user_id,is_reel,duration_seconds")
       .eq("user_id", user.id).order("created_at", { ascending: false })
       .then(({ data }) => setVideos((data ?? []) as MyVideo[]));
+  };
+
+  const loadHistory = async () => {
+    if (!user) return;
+    const { data: views } = await supabase.from("video_views")
+      .select("video_id,created_at").eq("user_id", user.id)
+      .order("created_at", { ascending: false }).limit(40);
+    const ids: string[] = [];
+    for (const v of (views ?? []) as { video_id: string }[]) {
+      if (!ids.includes(v.video_id)) ids.push(v.video_id);
+      if (ids.length === 5) break;
+    }
+    if (ids.length === 0) { setHistory([]); return; }
+    const { data: vids } = await supabase.from("videos")
+      .select("id,title,description,thumbnail_url,video_url,views,likes,comments_count,supav_count,channel_name,user_id,is_reel,duration_seconds")
+      .in("id", ids);
+    const map = new Map((vids ?? []).map((v: any) => [v.id, v as MyVideo]));
+    setHistory(ids.map((id) => map.get(id)).filter(Boolean) as MyVideo[]);
   };
 
   useEffect(() => {
