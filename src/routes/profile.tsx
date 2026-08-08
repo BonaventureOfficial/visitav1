@@ -417,7 +417,7 @@ function ProfilePage() {
             {shown.map((v) => (
               <button
                 key={v.id}
-                onClick={() => setSelected(v)}
+                onClick={() => { setSelected(v); setEditMeta(false); setTitleDraft(v.title); setDescDraft(v.description ?? ""); }}
                 className="group relative aspect-square rounded-xl overflow-hidden bg-card border border-border/60 hover:border-primary/50 transition"
               >
                 {v.thumbnail_url ? (
