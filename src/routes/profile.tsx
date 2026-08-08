@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { User as UserIcon, Eye, Play, Film, Camera, Loader2, Zap, Image as ImageIcon, Trash2, X, Settings as SettingsIcon, Pencil, Check, Lock, CalendarDays, Mail } from "lucide-react";
+import { User as UserIcon, Eye, Play, Film, Camera, Loader2, Zap, Image as ImageIcon, Trash2, X, Settings as SettingsIcon, Pencil, Check, Lock, CalendarDays, Mail, History as HistoryIcon, Type as TypeIcon } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
@@ -439,7 +439,7 @@ function ProfilePage() {
 
         <div className="mt-8 mb-3 flex items-center gap-2">
           <h2 className="font-display text-lg font-bold flex items-center gap-2">
-            <History className="h-4 w-4 text-primary" /> Historique
+            <HistoryIcon className="h-4 w-4 text-primary" /> Historique
           </h2>
           <span className="text-[11px] text-muted-foreground">5 dernières vidéos regardées</span>
         </div>
