@@ -256,6 +256,11 @@ function UploadPage() {
                 Cette vidéo fait {Math.round(duration)}s : elle doit être publiée comme Reel.
               </p>
             )}
+            {kind === "video" && duration > REEL_MAX_SECONDS && (
+              <p className={`mt-2 text-[11px] ${duration > VIDEO_MAX_SECONDS ? "text-destructive" : "text-muted-foreground"}`}>
+                {Math.floor(duration / 60)} min / 120 min max (2 h)
+              </p>
+            )}
           </div>
 
           {/* Video dropzone — orange HD frame */}
