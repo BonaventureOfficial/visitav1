@@ -17,6 +17,7 @@ type Kind = "video" | "reel";
 
 const YEAR = 60 * 60 * 24 * 365;
 const REEL_MAX_SECONDS = 120;
+const VIDEO_MAX_SECONDS = 7200; // 2 heures
 
 function UploadPage() {
   const { t } = useI18n();
@@ -83,6 +84,9 @@ function UploadPage() {
     if (kind === "reel" && dur > REEL_MAX_SECONDS) {
       toast.error(t("reelTooLong"));
     }
+    if (kind === "video" && dur > VIDEO_MAX_SECONDS) {
+      toast.error("Durée maximale : 2 heures.");
+    }
     const times = [dur * 0.25, dur * 0.5, dur * 0.75];
     const captured: string[] = [];
     const canvas = document.createElement("canvas");
@@ -138,6 +142,11 @@ function UploadPage() {
       toast.error("Une vidéo longue doit dépasser 2 minutes. Choisis Reel pour cette vidéo.");
       return;
     }
+    if (kind === "video" && duration > VIDEO_MAX_SECONDS) {
+      toast.error("Durée maximale : 2 heures.");
+      return;
+    }
+
 
     setSubmitting(true);
     setProgress(5);
@@ -248,6 +257,11 @@ function UploadPage() {
             {kind === "video" && duration > 0 && duration <= REEL_MAX_SECONDS && (
               <p className="mt-2 text-[11px] text-destructive">
                 Cette vidéo fait {Math.round(duration)}s : elle doit être publiée comme Reel.
+              </p>
+            )}
+            {kind === "video" && duration > REEL_MAX_SECONDS && (
+              <p className={`mt-2 text-[11px] ${duration > VIDEO_MAX_SECONDS ? "text-destructive" : "text-muted-foreground"}`}>
+                {Math.floor(duration / 60)} min / 120 min max (2 h)
               </p>
             )}
           </div>
