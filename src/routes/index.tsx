@@ -10,7 +10,7 @@ import { useI18n } from "@/lib/i18n";
 
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { formatCount } from "@/lib/format";
+import { formatCount, timeAgo } from "@/lib/format";
 import { usePlayer, useVideoHost } from "@/lib/player";
 import { toast } from "sonner";
 
