@@ -593,6 +593,13 @@ function ProfilePage() {
                 Change thumbnail from storage
               </button>
               <button
+                onClick={() => setEditMeta(true)}
+                disabled={busy}
+                className="w-full flex items-center gap-3 rounded-xl bg-secondary hover:bg-accent px-4 py-3 text-sm font-semibold transition disabled:opacity-60"
+              >
+                <TypeIcon className="h-4 w-4 text-primary" /> Modifier titre & description
+              </button>
+              <button
                 onClick={deleteVideo}
                 disabled={busy}
                 className="w-full flex items-center gap-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-3 text-sm font-semibold transition disabled:opacity-60"
@@ -600,7 +607,9 @@ function ProfilePage() {
                 <Trash2 className="h-4 w-4" /> Delete video permanently
               </button>
             </div>
+            )}
             <input ref={thumbRef} type="file" accept="image/*" className="hidden" onChange={onPickThumb} />
+
           </div>
         </div>
       )}
