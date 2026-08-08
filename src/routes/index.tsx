@@ -277,7 +277,24 @@ function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow;
       </div>
       <div className="p-3">
         <h3 className="font-display font-semibold text-sm leading-snug line-clamp-2">{v.title}</h3>
+        <p className="mt-1 text-[11px] text-muted-foreground">Il y a {timeAgo(v.created_at)}</p>
+        {v.description && (
+          <div className="mt-1">
+            <p className={`text-xs text-foreground/80 whitespace-pre-wrap ${descOpen ? "" : "line-clamp-1"}`}>
+              {v.description}
+            </p>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setDescOpen((o) => !o); }}
+              className="mt-0.5 text-[11px] font-semibold text-primary hover:underline"
+              aria-expanded={descOpen}
+            >
+              {descOpen ? "Réduire" : "…plus"}
+            </button>
+          </div>
+        )}
         <div className="mt-2 flex items-center gap-2">
+
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onAvatarClick(avatarUrl, v.channel_name, v.user_id); }}
