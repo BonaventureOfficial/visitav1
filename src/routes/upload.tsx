@@ -17,6 +17,7 @@ type Kind = "video" | "reel";
 
 const YEAR = 60 * 60 * 24 * 365;
 const REEL_MAX_SECONDS = 120;
+const VIDEO_MAX_SECONDS = 7200; // 2 heures
 
 function UploadPage() {
   const { t } = useI18n();
