@@ -436,8 +436,60 @@ function ProfilePage() {
           </div>
         );
         })()}
+
+        <div className="mt-8 mb-3 flex items-center gap-2">
+          <h2 className="font-display text-lg font-bold flex items-center gap-2">
+            <History className="h-4 w-4 text-primary" /> Historique
+          </h2>
+          <span className="text-[11px] text-muted-foreground">5 dernières vidéos regardées</span>
+        </div>
+
+        {history.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+            Aucun historique pour l'instant.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {history.map((v) => (
+              <button
+                key={v.id}
+                onClick={() => {
+                  if (!v.video_url) return;
+                  play({
+                    id: v.id, title: v.title, video_url: v.video_url,
+                    thumbnail_url: v.thumbnail_url, channel_name: v.channel_name,
+                    user_id: v.user_id, views: v.views,
+                  });
+                }}
+                className="w-full flex items-center gap-3 rounded-2xl bg-card border border-border hover:border-primary/50 p-2 text-left transition"
+              >
+                <div className="relative h-14 w-24 shrink-0 rounded-xl overflow-hidden bg-black">
+                  {v.thumbnail_url ? (
+                    <img src={v.thumbnail_url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full bg-gradient-to-br from-secondary to-card" />
+                  )}
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    <span className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                      <Play className="h-3 w-3 text-black fill-black" />
+                    </span>
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold line-clamp-1">{v.title}</p>
+                  <p className="text-[11px] text-muted-foreground line-clamp-1">{v.channel_name}</p>
+                  <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <Eye className="h-3 w-3" /> {formatCount(v.views)}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="h-6" />
       </section>
+
 
       {selected && (
         <div
