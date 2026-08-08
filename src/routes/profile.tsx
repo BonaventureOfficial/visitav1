@@ -540,7 +540,36 @@ function ProfilePage() {
               </button>
             </div>
 
+            {editMeta ? (
+              <div className="mt-5 space-y-2">
+                <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Titre *</label>
+                <input
+                  value={titleDraft}
+                  onChange={(e) => setTitleDraft(e.target.value.slice(0, 120))}
+                  className="w-full rounded-xl bg-secondary border border-border px-3 py-2 text-sm outline-none focus:border-primary"
+                  placeholder="Titre de la vidéo"
+                />
+                <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Description</label>
+                <textarea
+                  value={descDraft}
+                  onChange={(e) => setDescDraft(e.target.value.slice(0, 2000))}
+                  rows={4}
+                  className="w-full rounded-xl bg-secondary border border-border px-3 py-2 text-sm outline-none focus:border-primary resize-none"
+                  placeholder="Description…"
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-muted-foreground">{descDraft.length}/2000</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => { setEditMeta(false); setTitleDraft(selected.title); setDescDraft(selected.description ?? ""); }} disabled={busy} className="rounded-xl bg-secondary px-3 py-1.5 text-xs font-semibold">Annuler</button>
+                    <button onClick={saveMeta} disabled={busy} className="rounded-xl bg-primary text-primary-foreground px-3 py-1.5 text-xs font-semibold disabled:opacity-60">
+                      {busy ? "Enregistrement…" : "Enregistrer"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
             <div className="mt-5 space-y-2">
+
               <button
                 onClick={() => {
                   if (!selected.video_url) return;
