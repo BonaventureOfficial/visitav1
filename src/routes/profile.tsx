@@ -39,7 +39,7 @@ interface MyVideo {
   id: string; title: string; thumbnail_url: string | null; video_url: string | null;
   views: number; likes: number; comments_count: number; supav_count: number;
   channel_name: string | null; user_id: string | null; is_reel: boolean | null;
-  duration_seconds: number | null;
+  duration_seconds: number | null; description?: string | null;
 }
 
 function ProfilePage() {
