@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { User as UserIcon, Eye, Play, Film, Camera, Loader2, Zap, Image as ImageIcon, Trash2, X, Settings as SettingsIcon, Pencil, Check, Lock, CalendarDays, Mail } from "lucide-react";
+import { User as UserIcon, Eye, Play, Film, Camera, Loader2, Zap, Image as ImageIcon, Trash2, X, Settings as SettingsIcon, Pencil, Check, Lock, CalendarDays, Mail, History as HistoryIcon, Type as TypeIcon } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
@@ -39,7 +39,7 @@ interface MyVideo {
   id: string; title: string; thumbnail_url: string | null; video_url: string | null;
   views: number; likes: number; comments_count: number; supav_count: number;
   channel_name: string | null; user_id: string | null; is_reel: boolean | null;
-  duration_seconds: number | null;
+  duration_seconds: number | null; description?: string | null;
 }
 
 function ProfilePage() {
@@ -66,6 +66,10 @@ function ProfilePage() {
   const [followerCount, setFollowerCount] = useState(0);
   const [selected, setSelected] = useState<MyVideo | null>(null);
   const [busy, setBusy] = useState(false);
+  const [editMeta, setEditMeta] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [descDraft, setDescDraft] = useState("");
+  const [history, setHistory] = useState<MyVideo[]>([]);
 
   const nameLock = lockInfo(nameUpdatedAt);
   const bioLock = lockInfo(bioUpdatedAt);
@@ -76,9 +80,27 @@ function ProfilePage() {
 
   const reloadVideos = () => {
     if (!user) return;
-    supabase.from("videos").select("id,title,thumbnail_url,video_url,views,likes,comments_count,supav_count,channel_name,user_id,is_reel,duration_seconds")
+    supabase.from("videos").select("id,title,description,thumbnail_url,video_url,views,likes,comments_count,supav_count,channel_name,user_id,is_reel,duration_seconds")
       .eq("user_id", user.id).order("created_at", { ascending: false })
       .then(({ data }) => setVideos((data ?? []) as MyVideo[]));
+  };
+
+  const loadHistory = async () => {
+    if (!user) return;
+    const { data: views } = await supabase.from("video_views")
+      .select("video_id,created_at").eq("user_id", user.id)
+      .order("created_at", { ascending: false }).limit(40);
+    const ids: string[] = [];
+    for (const v of (views ?? []) as { video_id: string }[]) {
+      if (!ids.includes(v.video_id)) ids.push(v.video_id);
+      if (ids.length === 5) break;
+    }
+    if (ids.length === 0) { setHistory([]); return; }
+    const { data: vids } = await supabase.from("videos")
+      .select("id,title,description,thumbnail_url,video_url,views,likes,comments_count,supav_count,channel_name,user_id,is_reel,duration_seconds")
+      .in("id", ids);
+    const map = new Map((vids ?? []).map((v: any) => [v.id, v as MyVideo]));
+    setHistory(ids.map((id) => map.get(id)).filter(Boolean) as MyVideo[]);
   };
 
   useEffect(() => {
@@ -96,6 +118,7 @@ function ProfilePage() {
         setBioUpdatedAt(p?.bio_updated_at ?? null);
       });
     reloadVideos();
+    loadHistory();
     supabase.from("follows").select("id", { count: "exact", head: true }).eq("following_id", user.id)
       .then(({ count }) => setFollowerCount(count ?? 0));
   }, [user]);
@@ -207,6 +230,28 @@ function ProfilePage() {
       setBusy(false);
     }
   };
+
+  const saveMeta = async () => {
+    if (!selected || !user) return;
+    const title = titleDraft.trim();
+    if (title.length < 3) { toast.error("Titre trop court"); return; }
+    const description = descDraft.trim().slice(0, 2000);
+    setBusy(true);
+    try {
+      const { error } = await supabase.from("videos")
+        .update({ title, description }).eq("id", selected.id);
+      if (error) throw error;
+      toast.success("Vidéo mise à jour");
+      setSelected({ ...selected, title, description });
+      setEditMeta(false);
+      reloadVideos();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Échec de la mise à jour");
+    } finally {
+      setBusy(false);
+    }
+  };
+
 
   if (!user) return null;
 
@@ -394,7 +439,7 @@ function ProfilePage() {
             {shown.map((v) => (
               <button
                 key={v.id}
-                onClick={() => setSelected(v)}
+                onClick={() => { setSelected(v); setEditMeta(false); setTitleDraft(v.title); setDescDraft(v.description ?? ""); }}
                 className="group relative aspect-square rounded-xl overflow-hidden bg-card border border-border/60 hover:border-primary/50 transition"
               >
                 {v.thumbnail_url ? (
@@ -413,8 +458,60 @@ function ProfilePage() {
           </div>
         );
         })()}
+
+        <div className="mt-8 mb-3 flex items-center gap-2">
+          <h2 className="font-display text-lg font-bold flex items-center gap-2">
+            <HistoryIcon className="h-4 w-4 text-primary" /> Historique
+          </h2>
+          <span className="text-[11px] text-muted-foreground">5 dernières vidéos regardées</span>
+        </div>
+
+        {history.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+            Aucun historique pour l'instant.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {history.map((v) => (
+              <button
+                key={v.id}
+                onClick={() => {
+                  if (!v.video_url) return;
+                  play({
+                    id: v.id, title: v.title, video_url: v.video_url,
+                    thumbnail_url: v.thumbnail_url, channel_name: v.channel_name,
+                    user_id: v.user_id, views: v.views,
+                  });
+                }}
+                className="w-full flex items-center gap-3 rounded-2xl bg-card border border-border hover:border-primary/50 p-2 text-left transition"
+              >
+                <div className="relative h-14 w-24 shrink-0 rounded-xl overflow-hidden bg-black">
+                  {v.thumbnail_url ? (
+                    <img src={v.thumbnail_url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full bg-gradient-to-br from-secondary to-card" />
+                  )}
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    <span className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                      <Play className="h-3 w-3 text-black fill-black" />
+                    </span>
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold line-clamp-1">{v.title}</p>
+                  <p className="text-[11px] text-muted-foreground line-clamp-1">{v.channel_name}</p>
+                  <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <Eye className="h-3 w-3" /> {formatCount(v.views)}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="h-6" />
       </section>
+
 
       {selected && (
         <div
@@ -443,7 +540,36 @@ function ProfilePage() {
               </button>
             </div>
 
+            {editMeta ? (
+              <div className="mt-5 space-y-2">
+                <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Titre *</label>
+                <input
+                  value={titleDraft}
+                  onChange={(e) => setTitleDraft(e.target.value.slice(0, 120))}
+                  className="w-full rounded-xl bg-secondary border border-border px-3 py-2 text-sm outline-none focus:border-primary"
+                  placeholder="Titre de la vidéo"
+                />
+                <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Description</label>
+                <textarea
+                  value={descDraft}
+                  onChange={(e) => setDescDraft(e.target.value.slice(0, 2000))}
+                  rows={4}
+                  className="w-full rounded-xl bg-secondary border border-border px-3 py-2 text-sm outline-none focus:border-primary resize-none"
+                  placeholder="Description…"
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-muted-foreground">{descDraft.length}/2000</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => { setEditMeta(false); setTitleDraft(selected.title); setDescDraft(selected.description ?? ""); }} disabled={busy} className="rounded-xl bg-secondary px-3 py-1.5 text-xs font-semibold">Annuler</button>
+                    <button onClick={saveMeta} disabled={busy} className="rounded-xl bg-primary text-primary-foreground px-3 py-1.5 text-xs font-semibold disabled:opacity-60">
+                      {busy ? "Enregistrement…" : "Enregistrer"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
             <div className="mt-5 space-y-2">
+
               <button
                 onClick={() => {
                   if (!selected.video_url) return;
@@ -467,6 +593,13 @@ function ProfilePage() {
                 Change thumbnail from storage
               </button>
               <button
+                onClick={() => setEditMeta(true)}
+                disabled={busy}
+                className="w-full flex items-center gap-3 rounded-xl bg-secondary hover:bg-accent px-4 py-3 text-sm font-semibold transition disabled:opacity-60"
+              >
+                <TypeIcon className="h-4 w-4 text-primary" /> Modifier titre & description
+              </button>
+              <button
                 onClick={deleteVideo}
                 disabled={busy}
                 className="w-full flex items-center gap-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-3 text-sm font-semibold transition disabled:opacity-60"
@@ -474,7 +607,9 @@ function ProfilePage() {
                 <Trash2 className="h-4 w-4" /> Delete video permanently
               </button>
             </div>
+            )}
             <input ref={thumbRef} type="file" accept="image/*" className="hidden" onChange={onPickThumb} />
+
           </div>
         </div>
       )}
