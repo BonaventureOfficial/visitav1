@@ -84,6 +84,9 @@ function UploadPage() {
     if (kind === "reel" && dur > REEL_MAX_SECONDS) {
       toast.error(t("reelTooLong"));
     }
+    if (kind === "video" && dur > VIDEO_MAX_SECONDS) {
+      toast.error("Durée maximale : 2 heures.");
+    }
     const times = [dur * 0.25, dur * 0.5, dur * 0.75];
     const captured: string[] = [];
     const canvas = document.createElement("canvas");
