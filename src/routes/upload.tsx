@@ -139,6 +139,11 @@ function UploadPage() {
       toast.error("Une vidéo longue doit dépasser 2 minutes. Choisis Reel pour cette vidéo.");
       return;
     }
+    if (kind === "video" && duration > VIDEO_MAX_SECONDS) {
+      toast.error("Durée maximale : 2 heures.");
+      return;
+    }
+
 
     setSubmitting(true);
     setProgress(5);
