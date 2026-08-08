@@ -212,6 +212,7 @@ function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow;
   const [shares, setShares] = useState(v.shares);
   const [commentsCount, setCommentsCount] = useState(v.comments_count);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [descOpen, setDescOpen] = useState(false);
 
   useEffect(() => { setLiked(initialLiked); }, [initialLiked]);
 
