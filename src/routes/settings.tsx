@@ -84,7 +84,6 @@ function SettingsPage() {
     birth_place: "",
     birth_date: "",
     gender: "",
-    marital_status: "",
   });
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [savingKey, setSavingKey] = useState<IdentityKey | null>(null);
@@ -97,7 +96,7 @@ function SettingsPage() {
     if (!user) return;
     supabase
       .from("member_identity")
-      .select("full_name,nationality,birth_place,birth_date,gender,marital_status")
+      .select("full_name,nationality,birth_place,birth_date,gender")
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => {
@@ -106,9 +105,8 @@ function SettingsPage() {
           full_name: data.full_name ?? "",
           nationality: data.nationality ?? "",
           birth_place: data.birth_place ?? "",
-          birth_date: data.birth_date ?? "",
+          birth_date: data.birth_date ? isoToMdy(data.birth_date) : "",
           gender: data.gender ?? "",
-          marital_status: data.marital_status ?? "",
         };
         setIdentity(next);
         const marks: Record<string, boolean> = {};
@@ -121,10 +119,19 @@ function SettingsPage() {
 
   const confirmField = async (key: IdentityKey) => {
     if (!user) return;
-    const value = identity[key].trim();
-    if (!value) {
+    const raw = identity[key].trim();
+    if (!raw) {
       toast.error("Ce champ est obligatoire");
       return;
+    }
+    let value = raw;
+    if (key === "birth_date") {
+      const iso = mdyToIso(raw);
+      if (!iso) {
+        toast.error("Format attendu : Mois/Jour/Année (ex : 04/27/1990)");
+        return;
+      }
+      value = iso;
     }
     setSavingKey(key);
     const { error } = await supabase
@@ -138,6 +145,7 @@ function SettingsPage() {
     setSaved((s) => ({ ...s, [key]: true }));
     toast.success("Confirmé ✓");
   };
+
 
   const signOut = async () => {
     await supabase.auth.signOut();
