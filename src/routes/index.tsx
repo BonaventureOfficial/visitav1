@@ -324,7 +324,9 @@ function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow;
           <button onClick={share} className="flex items-center gap-1 hover:text-primary transition" aria-label="Share">
             <Share2 className="h-4 w-4" /> {formatCount(shares)}
           </button>
+          <DownloadButton videoUrl={v.video_url} title={v.title} />
         </div>
+
         {commentsOpen && (
           <CommentPanel videoId={v.id} onAdded={() => setCommentsCount((c) => c + 1)} />
         )}
