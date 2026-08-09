@@ -64,6 +64,42 @@ export type Database = {
         }
         Relationships: []
       }
+      member_identity: {
+        Row: {
+          birth_date: string | null
+          birth_place: string | null
+          created_at: string
+          full_name: string | null
+          gender: string | null
+          marital_status: string | null
+          nationality: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          birth_date?: string | null
+          birth_place?: string | null
+          created_at?: string
+          full_name?: string | null
+          gender?: string | null
+          marital_status?: string | null
+          nationality?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          birth_date?: string | null
+          birth_place?: string | null
+          created_at?: string
+          full_name?: string | null
+          gender?: string | null
+          marital_status?: string | null
+          nationality?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
