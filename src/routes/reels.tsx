@@ -267,7 +267,16 @@ function ReelItem({
           </span>
           <span className="text-[11px] font-semibold drop-shadow">{formatCount(shares)}</span>
         </button>
+        <div className="flex flex-col items-center gap-1">
+          <DownloadButton
+            videoUrl={r.video_url}
+            title={r.title}
+            className="h-11 w-11 rounded-full bg-black/50 backdrop-blur flex items-center justify-center"
+          />
+          <span className="text-[11px] font-semibold drop-shadow">Télécharger</span>
+        </div>
       </div>
+
 
       {/* Bottom channel info */}
       <div className="absolute inset-x-0 bottom-0 z-10 p-4 pr-20 text-white">
