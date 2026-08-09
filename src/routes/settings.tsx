@@ -180,7 +180,7 @@ function SettingsPage() {
             <p className="text-sm font-semibold flex items-center gap-2">
               <IdCard className="h-4 w-4 text-primary" /> Identité du membre
             </p>
-            <span className="text-[11px] text-muted-foreground">{completed}/6</span>
+            <span className="text-[11px] text-muted-foreground">{completed}/5</span>
           </div>
           <p className="text-[11px] text-muted-foreground mb-3">
             Ces informations sont requises pour générer bientôt votre carte numérique unique de membre. Confirmez chaque
