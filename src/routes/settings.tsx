@@ -36,21 +36,43 @@ export const Route = createFileRoute("/settings")({
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
-type IdentityKey = "full_name" | "nationality" | "birth_place" | "birth_date" | "gender" | "marital_status";
+type IdentityKey = "full_name" | "nationality" | "birth_place" | "birth_date" | "gender";
 
-const FIELDS: Array<{ key: IdentityKey; label: string; type: "text" | "date" | "select"; options?: string[] }> = [
+const FIELDS: Array<{ key: IdentityKey; label: string; type: "text" | "dob" | "select"; options?: string[] }> = [
   { key: "full_name", label: "Nom et Prénom", type: "text" },
   { key: "nationality", label: "Nationalité", type: "text" },
   { key: "birth_place", label: "Lieu de Naissance", type: "text" },
-  { key: "birth_date", label: "Date de naissance", type: "date" },
+  { key: "birth_date", label: "Date de naissance (Mois/Jour/Année)", type: "dob" },
   { key: "gender", label: "Genre (Sexe)", type: "select", options: ["Homme", "Femme", "Autre"] },
-  {
-    key: "marital_status",
-    label: "Statut",
-    type: "select",
-    options: ["Célibataire", "Marié(e)", "Divorcé(e)", "Veuf/Veuve", "En couple"],
-  },
 ];
+
+/** "1990-04-27" -> "04/27/1990" */
+function isoToMdy(iso: string) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return m ? `${m[2]}/${m[3]}/${m[1]}` : iso;
+}
+
+/** "04/27/1990" -> "1990-04-27" (null si invalide) */
+function mdyToIso(v: string) {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v.trim());
+  if (!m) return null;
+  const [, mm, dd, yyyy] = m;
+  const month = Number(mm);
+  const day = Number(dd);
+  const year = Number(yyyy);
+  if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1900 || year > new Date().getFullYear()) return null;
+  const d = new Date(`${yyyy}-${mm}-${dd}T00:00:00Z`);
+  if (Number.isNaN(d.getTime()) || d.getUTCDate() !== day || d.getUTCMonth() + 1 !== month) return null;
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/** Masque de saisie manuelle MM/JJ/AAAA */
+function maskMdy(input: string) {
+  const digits = input.replace(/\D/g, "").slice(0, 8);
+  const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean);
+  return parts.join("/");
+}
+
 
 function SettingsPage() {
   const { user, loading } = useAuth();
@@ -62,7 +84,6 @@ function SettingsPage() {
     birth_place: "",
     birth_date: "",
     gender: "",
-    marital_status: "",
   });
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [savingKey, setSavingKey] = useState<IdentityKey | null>(null);
@@ -75,7 +96,7 @@ function SettingsPage() {
     if (!user) return;
     supabase
       .from("member_identity")
-      .select("full_name,nationality,birth_place,birth_date,gender,marital_status")
+      .select("full_name,nationality,birth_place,birth_date,gender")
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => {
@@ -84,9 +105,8 @@ function SettingsPage() {
           full_name: data.full_name ?? "",
           nationality: data.nationality ?? "",
           birth_place: data.birth_place ?? "",
-          birth_date: data.birth_date ?? "",
+          birth_date: data.birth_date ? isoToMdy(data.birth_date) : "",
           gender: data.gender ?? "",
-          marital_status: data.marital_status ?? "",
         };
         setIdentity(next);
         const marks: Record<string, boolean> = {};
@@ -99,10 +119,19 @@ function SettingsPage() {
 
   const confirmField = async (key: IdentityKey) => {
     if (!user) return;
-    const value = identity[key].trim();
-    if (!value) {
+    const raw = identity[key].trim();
+    if (!raw) {
       toast.error("Ce champ est obligatoire");
       return;
+    }
+    let value = raw;
+    if (key === "birth_date") {
+      const iso = mdyToIso(raw);
+      if (!iso) {
+        toast.error("Format attendu : Mois/Jour/Année (ex : 04/27/1990)");
+        return;
+      }
+      value = iso;
     }
     setSavingKey(key);
     const { error } = await supabase
@@ -116,6 +145,7 @@ function SettingsPage() {
     setSaved((s) => ({ ...s, [key]: true }));
     toast.success("Confirmé ✓");
   };
+
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -150,7 +180,7 @@ function SettingsPage() {
             <p className="text-sm font-semibold flex items-center gap-2">
               <IdCard className="h-4 w-4 text-primary" /> Identité du membre
             </p>
-            <span className="text-[11px] text-muted-foreground">{completed}/6</span>
+            <span className="text-[11px] text-muted-foreground">{completed}/5</span>
           </div>
           <p className="text-[11px] text-muted-foreground mb-3">
             Ces informations sont requises pour générer bientôt votre carte numérique unique de membre. Confirmez chaque
@@ -184,15 +214,19 @@ function SettingsPage() {
                   ) : (
                     <input
                       id={`f-${f.key}`}
-                      type={f.type}
+                      type="text"
+                      inputMode={f.type === "dob" ? "numeric" : "text"}
+                      placeholder={f.type === "dob" ? "MM/JJ/AAAA" : undefined}
                       value={identity[f.key]}
-                      maxLength={120}
+                      maxLength={f.type === "dob" ? 10 : 120}
                       onChange={(e) => {
-                        setIdentity((s) => ({ ...s, [f.key]: e.target.value }));
+                        const val = f.type === "dob" ? maskMdy(e.target.value) : e.target.value;
+                        setIdentity((s) => ({ ...s, [f.key]: val }));
                         setSaved((s) => ({ ...s, [f.key]: false }));
                       }}
                       className="flex-1 h-10 rounded-xl bg-secondary border border-border px-3 text-sm outline-none focus:border-primary"
                     />
+
                   )}
                   <button
                     type="button"
