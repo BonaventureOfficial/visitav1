@@ -214,15 +214,19 @@ function SettingsPage() {
                   ) : (
                     <input
                       id={`f-${f.key}`}
-                      type={f.type}
+                      type="text"
+                      inputMode={f.type === "dob" ? "numeric" : "text"}
+                      placeholder={f.type === "dob" ? "MM/JJ/AAAA" : undefined}
                       value={identity[f.key]}
-                      maxLength={120}
+                      maxLength={f.type === "dob" ? 10 : 120}
                       onChange={(e) => {
-                        setIdentity((s) => ({ ...s, [f.key]: e.target.value }));
+                        const val = f.type === "dob" ? maskMdy(e.target.value) : e.target.value;
+                        setIdentity((s) => ({ ...s, [f.key]: val }));
                         setSaved((s) => ({ ...s, [f.key]: false }));
                       }}
                       className="flex-1 h-10 rounded-xl bg-secondary border border-border px-3 text-sm outline-none focus:border-primary"
                     />
+
                   )}
                   <button
                     type="button"
