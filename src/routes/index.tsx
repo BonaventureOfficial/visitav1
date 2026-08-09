@@ -4,6 +4,7 @@ import { Eye, Play, Film, Heart, MessageCircle, Share2, Zap, CalendarDays } from
 import { AppLayout } from "@/components/AppLayout";
 import { CategoryMarquee } from "@/components/CategoryMarquee";
 import { CommentsThread } from "@/components/CommentsThread";
+import { DownloadButton } from "@/components/DownloadButton";
 import { FollowButton } from "@/components/FollowButton";
 import { SupavButton } from "@/components/SupavButton";
 import { useI18n } from "@/lib/i18n";

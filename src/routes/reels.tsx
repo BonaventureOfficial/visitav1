@@ -4,6 +4,7 @@ import { Heart, MessageCircle, Share2, Volume2, VolumeX, Clapperboard } from "lu
 import { AppLayout } from "@/components/AppLayout";
 import { FollowButton } from "@/components/FollowButton";
 import { CommentsThread } from "@/components/CommentsThread";
+import { DownloadButton } from "@/components/DownloadButton";
 
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
