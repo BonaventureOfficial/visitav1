@@ -208,7 +208,10 @@ export function DownloadButton({
     el.muted = true; // évite le double son pendant l'extraction
     el.volume = 0;
     el.preload = "auto";
-    el.style.cssText = "position:fixed;left:-9999px;width:1px;height:1px;opacity:0";
+    // Garder une vraie surface de rendu dans le viewport évite que Chromium
+    // bride fortement les images d'un média considéré comme hors écran.
+    el.style.cssText =
+      "position:fixed;right:0;bottom:0;width:320px;height:180px;opacity:.001;pointer-events:none;z-index:-1";
     document.body.appendChild(el);
 
     const cleanup = () => {
@@ -249,7 +252,9 @@ export function DownloadButton({
       );
       const rec = new MediaRecorder(stream, {
         ...(mime ? { mimeType: mime } : {}),
-        videoBitsPerSecond: 6_000_000,
+        // Un débit raisonnable réduit fortement le poids et la charge
+        // d'encodage sans dégrader visiblement un extrait mobile/web.
+        videoBitsPerSecond: 3_000_000,
         audioBitsPerSecond: 128_000,
       });
       const chunks: BlobPart[] = [];
@@ -263,7 +268,6 @@ export function DownloadButton({
 
       const span = to - from;
       rec.start();
-      const t0 = performance.now();
       await el.play();
 
       await new Promise<void>((resolve) => {
@@ -280,9 +284,10 @@ export function DownloadButton({
         requestAnimationFrame(tick);
       });
 
-      const elapsedMs = performance.now() - t0;
       let blob = await done;
-      if (!isMp4) blob = await fixWebmDuration(blob, Math.round(elapsedMs));
+      // La durée du fichier doit être celle de la plage vidéo, pas le temps
+      // réel écoulé pendant l'encodage (qui inclut les éventuels blocages CPU).
+      if (!isMp4) blob = await fixWebmDuration(blob, Math.round(span * 1000));
       setProgress(100);
       downloadBlob(blob, isMp4 ? "mp4" : "webm");
       toast.success(`Extrait téléchargé (${fmt(span)})`);
