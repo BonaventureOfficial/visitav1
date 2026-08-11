@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, X, Loader2, Play, Pause } from "lucide-react";
 import { toast } from "sonner";
-import { fixWebmDuration } from "@/lib/webm-duration";
+import { cancelVideoCut, cutVideoSmoothly } from "@/lib/video-cutter";
 
 function fmt(s: number) {
   if (!Number.isFinite(s) || s < 0) s = 0;
@@ -192,110 +192,24 @@ export function DownloadButton({
       toast.error("Sélection trop courte");
       return;
     }
-    if (typeof MediaRecorder === "undefined") {
-      toast.error("Découpage non supporté sur cet appareil");
-      return;
-    }
     setBusy(true);
     setProgress(0);
     cancelRef.current = false;
 
-    // Élément dédié pour l'extraction (le lecteur d'aperçu reste intact)
-    const el = document.createElement("video");
-    el.src = videoUrl;
-    el.crossOrigin = "anonymous";
-    el.playsInline = true;
-    el.muted = true; // évite le double son pendant l'extraction
-    el.volume = 0;
-    el.preload = "auto";
-    // Garder une vraie surface de rendu dans le viewport évite que Chromium
-    // bride fortement les images d'un média considéré comme hors écran.
-    el.style.cssText =
-      "position:fixed;right:0;bottom:0;width:320px;height:180px;opacity:.001;pointer-events:none;z-index:-1";
-    document.body.appendChild(el);
-
-    const cleanup = () => {
-      try {
-        el.pause();
-      } catch {
-        /* noop */
-      }
-      el.removeAttribute("src");
-      el.load();
-      el.remove();
-      setBusy(false);
-    };
-
     try {
       videoRef.current?.pause();
       setPreviewing(false);
-
-      await new Promise<void>((resolve, reject) => {
-        el.onloadeddata = () => resolve();
-        el.onerror = () => reject(new Error("Lecture impossible"));
-      });
-
-      await new Promise<void>((resolve) => {
-        el.onseeked = () => resolve();
-        el.currentTime = from;
-      });
-
-      const media = el as HTMLVideoElement & {
-        captureStream?: () => MediaStream;
-        mozCaptureStream?: () => MediaStream;
-      };
-      const stream = media.captureStream?.() ?? media.mozCaptureStream?.();
-      if (!stream) throw new Error("Découpage non supporté sur ce navigateur");
-
-      const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"].find(
-        (m) => MediaRecorder.isTypeSupported(m),
-      );
-      const rec = new MediaRecorder(stream, {
-        ...(mime ? { mimeType: mime } : {}),
-        // Un débit raisonnable réduit fortement le poids et la charge
-        // d'encodage sans dégrader visiblement un extrait mobile/web.
-        videoBitsPerSecond: 3_000_000,
-        audioBitsPerSecond: 128_000,
-      });
-      const chunks: BlobPart[] = [];
-      rec.ondataavailable = (e) => {
-        if (e.data.size) chunks.push(e.data);
-      };
-      const isMp4 = !!mime?.startsWith("video/mp4");
-      const done = new Promise<Blob>((resolve) => {
-        rec.onstop = () => resolve(new Blob(chunks, { type: isMp4 ? "video/mp4" : "video/webm" }));
-      });
-
-      const span = to - from;
-      rec.start();
-      await el.play();
-
-      await new Promise<void>((resolve) => {
-        const tick = () => {
-          setProgress(Math.min(99, Math.round(((el.currentTime - from) / span) * 100)));
-          if (cancelRef.current || el.currentTime >= to || el.ended) {
-            el.pause();
-            if (rec.state !== "inactive") rec.stop();
-            resolve();
-            return;
-          }
-          requestAnimationFrame(tick);
-        };
-        requestAnimationFrame(tick);
-      });
-
-      let blob = await done;
-      // La durée du fichier doit être celle de la plage vidéo, pas le temps
-      // réel écoulé pendant l'encodage (qui inclut les éventuels blocages CPU).
-      if (!isMp4) blob = await fixWebmDuration(blob, Math.round(span * 1000));
-      setProgress(100);
-      downloadBlob(blob, isMp4 ? "mp4" : "webm");
-      toast.success(`Extrait téléchargé (${fmt(span)})`);
+      const blob = await cutVideoSmoothly(videoUrl, from, to, setProgress);
+      if (cancelRef.current) return;
+      downloadBlob(blob, "mp4");
+      toast.success(`Extrait fluide téléchargé (${fmt(to - from)})`);
       setOpen(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur de découpage");
+      if (!cancelRef.current) {
+        toast.error(e instanceof Error ? e.message : "Erreur de découpage");
+      }
     } finally {
-      cleanup();
+      setBusy(false);
     }
   };
 
@@ -335,6 +249,7 @@ export function DownloadButton({
               <button
                 onClick={() => {
                   cancelRef.current = true;
+                  cancelVideoCut();
                   if (!busy) setOpen(false);
                 }}
                 className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center"
@@ -419,7 +334,7 @@ export function DownloadButton({
                 {previewing ? "Arrêter l'aperçu" : "Écouter la sélection"}
               </button>
               <p className="text-[10px] text-muted-foreground">
-                L'extraction se fait en temps réel : gardez cette fenêtre ouverte jusqu'à 100 %.
+                L'extrait est optimisé pour une lecture fluide. Gardez cette fenêtre ouverte jusqu'à 100 %.
               </p>
             </div>
 
