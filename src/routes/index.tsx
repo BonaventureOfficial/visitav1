@@ -4,7 +4,7 @@ import { Eye, Play, Film, Heart, MessageCircle, Share2, Zap, CalendarDays } from
 import { AppLayout } from "@/components/AppLayout";
 import { CategoryMarquee } from "@/components/CategoryMarquee";
 import { CommentsThread } from "@/components/CommentsThread";
-import { DownloadButton } from "@/components/DownloadButton";
+
 import { FollowButton } from "@/components/FollowButton";
 import { SupavButton } from "@/components/SupavButton";
 import { useI18n } from "@/lib/i18n";
@@ -324,7 +324,7 @@ function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow;
           <button onClick={share} className="flex items-center gap-1 hover:text-primary transition" aria-label="Share">
             <Share2 className="h-4 w-4" /> {formatCount(shares)}
           </button>
-          <DownloadButton videoUrl={v.video_url} title={v.title} />
+          
         </div>
 
         {commentsOpen && (
