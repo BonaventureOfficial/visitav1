@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { formatCount } from "@/lib/format";
+import { track, trackImpression } from "@/lib/track";
 
 export interface PlayingVideo {
   id: string;
@@ -220,7 +221,11 @@ function PersistentPlayer({ hostEl, bumpWatched }: { hostEl: HTMLElement | null;
     return () => { v.removeEventListener("play", onP); v.removeEventListener("pause", onP); };
   }, [current?.id]);
 
-  useEffect(() => { watchedRef.current = 0; lastTimeRef.current = 0; }, [current?.id]);
+  const lastSentBucketRef = useRef(0);
+  useEffect(() => {
+    watchedRef.current = 0; lastTimeRef.current = 0; lastSentBucketRef.current = 0;
+    if (current?.id) trackImpression(current.id);
+  }, [current?.id]);
 
   useEffect(() => {
     const v = videoRef.current; if (!v || !current) return;
@@ -230,6 +235,26 @@ function PersistentPlayer({ hostEl, bumpWatched }: { hostEl: HTMLElement | null;
       if (dt > 0 && dt < 1.5) watchedRef.current += dt;
       lastTimeRef.current = t;
       if (current.id) bumpWatched(current.id, watchedRef.current);
+      // signaux serveur : watch toutes les 15 s, completion en fin de lecture
+      if (current.id) {
+        const bucket = Math.floor(watchedRef.current / 15);
+        if (bucket > lastSentBucketRef.current) {
+          lastSentBucketRef.current = bucket;
+          void track("watch", current.id, {
+            watchMs: Math.round(watchedRef.current * 1000),
+            positionMs: Math.round(t * 1000),
+            durationMs: Number.isFinite(v.duration) ? Math.round(v.duration * 1000) : 0,
+          });
+        }
+        if (Number.isFinite(v.duration) && v.duration > 0 && t / v.duration > 0.9) {
+          void track("complete", current.id, {
+            watchMs: Math.round(watchedRef.current * 1000),
+            positionMs: Math.round(t * 1000),
+            durationMs: Math.round(v.duration * 1000),
+            once: true,
+          });
+        }
+      }
       if (watchedRef.current >= 30 && user && current.id && !recordedRef.current.has(current.id)) {
         recordedRef.current.add(current.id);
         const { error } = await (supabase as any).from("video_views").insert({ user_id: user.id, video_id: current.id });
