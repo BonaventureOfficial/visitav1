@@ -5,12 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { usePlayer } from "@/lib/player";
 import { formatCount } from "@/lib/format";
 import { toast } from "sonner";
-
-async function sha256Hex(input: string): Promise<string> {
-  const buf = new TextEncoder().encode(input);
-  const digest = await crypto.subtle.digest("SHA-256", buf);
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
+import { giveSupav } from "@/lib/ranking.functions";
 
 function utcDayKey(): string {
   const d = new Date();
