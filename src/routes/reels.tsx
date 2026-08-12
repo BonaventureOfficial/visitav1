@@ -10,6 +10,8 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCount } from "@/lib/format";
+import { fetchRankedFeed } from "@/lib/feed";
+import { track, trackImpression } from "@/lib/track";
 import { toast } from "sonner";
 
 interface ReelRow {
@@ -47,13 +49,9 @@ function ReelsPage() {
   const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
-    (supabase as any).from("videos")
-      .select("id,title,description,thumbnail_url,video_url,views,likes,comments_count,shares,channel_name,user_id,created_at")
-      .eq("is_reel", true)
-      .order("created_at", { ascending: false })
-      .limit(60)
-      .then(({ data }: any) => { setReels((data ?? []) as ReelRow[]); setLoading(false); });
-  }, []);
+    fetchRankedFeed({ isReel: true, userId: user?.id ?? null, limit: 60 })
+      .then((rows) => { setReels(rows as unknown as ReelRow[]); setLoading(false); });
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user || reels.length === 0) { setLikedIds(new Set()); return; }

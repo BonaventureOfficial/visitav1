@@ -11,6 +11,8 @@ import { useI18n } from "@/lib/i18n";
 
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchRankedFeed } from "@/lib/feed";
+import { track, trackImpression } from "@/lib/track";
 import { formatCount, timeAgo } from "@/lib/format";
 import { usePlayer, useVideoHost } from "@/lib/player";
 import { toast } from "sonner";
@@ -63,12 +65,9 @@ function Home() {
   const [bigAvatar, setBigAvatar] = useState<{ url: string; name: string; bio: string | null; joined: string | null } | null>(null);
 
   useEffect(() => {
-    (supabase as any).from("videos")
-      .select("id,title,description,category,thumbnail_url,video_url,views,likes,comments_count,reposts,shares,supav_count,channel_name,user_id,created_at")
-      .eq("is_reel", false)
-      .order("created_at", { ascending: false }).limit(60)
-      .then(({ data }: any) => { setVideos((data ?? []) as VideoRow[]); setLoading(false); });
-  }, []);
+    fetchRankedFeed({ isReel: false, userId: user?.id ?? null, limit: 60 })
+      .then((rows) => { setVideos(rows as unknown as VideoRow[]); setLoading(false); });
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user || videos.length === 0) { setLikedIds(new Set()); return; }
