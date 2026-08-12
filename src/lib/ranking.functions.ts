@@ -101,13 +101,28 @@ export const getAdminAnalytics = createServerFn({ method: "POST" })
     const { data: vids } = ids.length
       ? await supabaseAdmin.from("videos" as never).select("id,title,channel_name,views").in("id", ids)
       : { data: [] as unknown[] };
-    const vmap = new Map(
-      ((vids ?? []) as Array<{ id: string }>).map((v) => [v.id, v as Record<string, unknown>]),
-    );
-    const topVideos = ((topScores ?? []) as Array<Record<string, unknown>>).map((s) => ({
-      ...s,
-      video: vmap.get(s["video_id"] as string) ?? null,
-    }));
+    type VideoLite = { id: string; title: string; channel_name: string | null; views: number };
+    const vmap = new Map(((vids ?? []) as VideoLite[]).map((v) => [v.id, v]));
+    type ScoreRow = {
+      video_id: string;
+      quality_score: number;
+      trending_score: number;
+      exploration_boost: number;
+      final_score: number;
+    };
+    const topVideos = ((topScores ?? []) as ScoreRow[]).map((s) => {
+      const v = vmap.get(s.video_id) ?? null;
+      return {
+        video_id: s.video_id,
+        quality_score: Number(s.quality_score),
+        trending_score: Number(s.trending_score),
+        exploration_boost: Number(s.exploration_boost),
+        final_score: Number(s.final_score),
+        title: v?.title ?? "—",
+        channel_name: v?.channel_name ?? "—",
+        views: v?.views ?? 0,
+      };
+    });
 
     const { data: creators } = await supabaseAdmin
       .from("creator_stats" as never)
@@ -121,9 +136,20 @@ export const getAdminAnalytics = createServerFn({ method: "POST" })
     const pmap = new Map(
       ((profs ?? []) as Array<{ id: string; channel_name: string }>).map((p) => [p.id, p.channel_name]),
     );
-    const topCreators = ((creators ?? []) as Array<Record<string, unknown>>).map((c) => ({
-      ...c,
-      channel_name: pmap.get(c["user_id"] as string) ?? "—",
+    type CreatorRow = {
+      user_id: string;
+      videos_count: number;
+      followers: number;
+      avg_completion: number;
+      quality_score: number;
+    };
+    const topCreators = ((creators ?? []) as CreatorRow[]).map((c) => ({
+      user_id: c.user_id,
+      videos_count: Number(c.videos_count),
+      followers: Number(c.followers),
+      avg_completion: Number(c.avg_completion),
+      quality_score: Number(c.quality_score),
+      channel_name: pmap.get(c.user_id) ?? "—",
     }));
 
     return { counts, feed, topVideos, topCreators, generatedAt: new Date().toISOString() };
