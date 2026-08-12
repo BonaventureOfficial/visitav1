@@ -5,12 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { usePlayer } from "@/lib/player";
 import { formatCount } from "@/lib/format";
 import { toast } from "sonner";
-
-async function sha256Hex(input: string): Promise<string> {
-  const buf = new TextEncoder().encode(input);
-  const digest = await crypto.subtle.digest("SHA-256", buf);
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
+import { giveSupav } from "@/lib/ranking.functions";
 
 function utcDayKey(): string {
   const d = new Date();
@@ -50,17 +45,19 @@ export function SupavButton({ videoId, initialCount }: Props) {
     if (usedToday) { toast.info("You already gave your SupaV today. Come back in 24h."); return; }
     if (!eligible) { toast.info(`Watch at least 60s to unlock SupaV (${Math.floor(seconds)}s)`); return; }
     setBusy(true);
-    const day_key = utcDayKey();
-    const day_hash = await sha256Hex(`${user.id}:${videoId}:${day_key}`);
-    const { error } = await (supabase as any).from("video_supavs").insert({
-      user_id: user.id, video_id: videoId, day_key, day_hash,
-    });
+    const res = await giveSupav({ data: { videoId } }).catch(() => ({ ok: false, reason: "network" }));
     setBusy(false);
-    if (error) {
-      if ((error as any).code === "23505") {
-        setUsedToday(true);
-        toast.info("You already gave your SupaV today.");
-      } else toast.error(error.message);
+    if (!res.ok) {
+      const map: Record<string, string> = {
+        already_today: "You already gave your SupaV today.",
+        not_enough_watch: "Watch at least 60s (validated server-side) to unlock SupaV.",
+        self: "You cannot SupaV your own video.",
+        account_too_new: "Your account is too new to give a SupaV.",
+        auth: "Sign in to give a SupaV",
+      };
+      const reason = (res as { reason?: string }).reason ?? "";
+      if (reason === "already_today") setUsedToday(true);
+      toast.info(map[reason] ?? "SupaV unavailable right now.");
       return;
     }
     setCount((c) => c + 1);
@@ -68,6 +65,7 @@ export function SupavButton({ videoId, initialCount }: Props) {
     setThisVideo(true);
     toast.success("⚡ SupaV boost sent for 24h!");
   };
+
 
   const disabled = busy || usedToday === true || !eligible;
   const active = thisVideo;

@@ -10,6 +10,8 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCount } from "@/lib/format";
+import { fetchRankedFeed } from "@/lib/feed";
+import { track, trackImpression } from "@/lib/track";
 import { toast } from "sonner";
 
 interface ReelRow {
@@ -47,13 +49,9 @@ function ReelsPage() {
   const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
-    (supabase as any).from("videos")
-      .select("id,title,description,thumbnail_url,video_url,views,likes,comments_count,shares,channel_name,user_id,created_at")
-      .eq("is_reel", true)
-      .order("created_at", { ascending: false })
-      .limit(60)
-      .then(({ data }: any) => { setReels((data ?? []) as ReelRow[]); setLoading(false); });
-  }, []);
+    fetchRankedFeed({ isReel: true, userId: user?.id ?? null, limit: 60 })
+      .then((rows) => { setReels(rows as unknown as ReelRow[]); setLoading(false); });
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user || reels.length === 0) { setLikedIds(new Set()); return; }
@@ -169,6 +167,50 @@ function ReelItem({
 
   // Count view once past 30s (uses insert on video_views, unique per user/video)
   const recordedRef = useRef(false);
+  const watchedRef = useRef(0);
+  const lastTRef = useRef(0);
+  const bucketRef = useRef(0);
+
+  useEffect(() => { if (visible) trackImpression(r.id); }, [visible, r.id]);
+
+  // signaux de visionnage / skip rapide
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const onT = () => {
+      const t = v.currentTime;
+      const dt = t - lastTRef.current;
+      if (dt > 0 && dt < 1.5) watchedRef.current += dt;
+      lastTRef.current = t;
+      const b = Math.floor(watchedRef.current / 15);
+      if (b > bucketRef.current) {
+        bucketRef.current = b;
+        void track("watch", r.id, {
+          watchMs: Math.round(watchedRef.current * 1000),
+          positionMs: Math.round(t * 1000),
+          durationMs: Number.isFinite(v.duration) ? Math.round(v.duration * 1000) : 0,
+        });
+      }
+      if (Number.isFinite(v.duration) && v.duration > 0 && t / v.duration > 0.9) {
+        void track("complete", r.id, {
+          watchMs: Math.round(watchedRef.current * 1000),
+          durationMs: Math.round(v.duration * 1000),
+          once: true,
+        });
+      }
+    };
+    v.addEventListener("timeupdate", onT);
+    return () => v.removeEventListener("timeupdate", onT);
+  }, [r.id]);
+
+  useEffect(() => {
+    if (visible) return;
+    if (watchedRef.current > 0 && watchedRef.current < 5) {
+      void track("skip", r.id, { watchMs: Math.round(watchedRef.current * 1000) });
+      watchedRef.current = 0;
+    }
+  }, [visible, r.id]);
+
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !user) return;
