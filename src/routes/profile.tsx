@@ -325,6 +325,16 @@ function ProfilePage() {
               <p className="text-xs text-primary">{formatCount(followerCount)} followers</p>
             </div>
 
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="rounded-full p-2.5 bg-primary/15 text-primary hover:bg-primary/25 shrink-0"
+                aria-label="Console de contrôle"
+                title="Console de contrôle absolu"
+              >
+                <ShieldCheck className="h-4 w-4" />
+              </Link>
+            )}
             <Link
               to="/settings"
               className="rounded-full p-2.5 bg-secondary hover:bg-accent text-muted-foreground hover:text-foreground shrink-0"
