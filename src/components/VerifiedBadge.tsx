@@ -12,7 +12,11 @@ const STYLES: Record<Tier, { className: string; label: string }> = {
 
 export function VerifiedBadge({ tier, className = "h-4 w-4" }: { tier: Tier; className?: string }) {
   const s = STYLES[tier];
-  return <BadgeCheck aria-label={s.label} title={s.label} className={`${className} ${s.className}`} />;
+  return (
+    <span title={s.label} className="inline-flex">
+      <BadgeCheck aria-label={s.label} className={`${className} ${s.className}`} />
+    </span>
+  );
 }
 
 /** Récupère le niveau de vérification d'un utilisateur (public). */
