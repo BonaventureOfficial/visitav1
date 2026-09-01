@@ -3,6 +3,15 @@ import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { getAdminAnalytics, recomputeRanking } from "@/lib/ranking.functions";
 import { toast } from "sonner";
+import { ShieldCheck } from "lucide-react";
+import { VerifiedBadge, type Tier } from "@/components/VerifiedBadge";
+import {
+  adminListMembers,
+  adminRecentVideos,
+  adminSetRole,
+  adminSetVerification,
+  adminDeleteVideo,
+} from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -119,6 +128,8 @@ function AdminPage() {
                 ))}
               </div>
             </section>
+
+            <ControlCenter />
           </>
         )}
       </div>
@@ -132,5 +143,168 @@ function Stat({ label, value }: { label: string; value: number | string }) {
       <div className="text-lg font-bold text-primary">{value}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
     </div>
+  );
+}
+
+type Member = Awaited<ReturnType<typeof adminListMembers>>[number];
+type RecentVideo = Awaited<ReturnType<typeof adminRecentVideos>>[number];
+
+const TIERS = ["platinum", "gold", "blue"] as const;
+
+function ControlCenter() {
+  const [members, setMembers] = useState<Member[]>([]);
+  const [videos, setVideos] = useState<RecentVideo[]>([]);
+  const [q, setQ] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = () => {
+    adminListMembers().then(setMembers).catch(() => {});
+    adminRecentVideos().then(setVideos).catch(() => {});
+  };
+  useEffect(load, []);
+
+  const setTier = async (userId: string, tier: (typeof TIERS)[number] | null) => {
+    setBusy(userId);
+    try {
+      await adminSetVerification({ data: { userId, tier } });
+      toast.success(tier ? `Badge ${tier} accordé` : "Badge retiré");
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Action impossible");
+    }
+    setBusy(null);
+  };
+
+  const toggleRole = async (userId: string, role: "admin" | "moderator", grant: boolean) => {
+    setBusy(userId);
+    try {
+      await adminSetRole({ data: { userId, role, grant } });
+      toast.success(grant ? `Rôle ${role} accordé` : `Rôle ${role} retiré`);
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Action impossible");
+    }
+    setBusy(null);
+  };
+
+  const removeVideo = async (videoId: string) => {
+    setBusy(videoId);
+    try {
+      await adminDeleteVideo({ data: { videoId } });
+      toast.success("Vidéo supprimée");
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Suppression impossible");
+    }
+    setBusy(null);
+  };
+
+  const filtered = members.filter(
+    (m) =>
+      !q.trim() ||
+      (m.channel_name ?? "").toLowerCase().includes(q.toLowerCase()) ||
+      (m.email ?? "").toLowerCase().includes(q.toLowerCase()),
+  );
+
+  return (
+    <>
+      <section>
+        <h2 className="font-semibold mb-2 flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-primary" /> Contrôle absolu — Membres
+        </h2>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Rechercher une chaîne ou un email…"
+          className="w-full h-10 rounded-xl bg-secondary border border-border px-3 text-sm outline-none focus:border-primary mb-3"
+        />
+        <div className="space-y-2">
+          {filtered.map((m) => (
+            <div key={m.id} className="rounded-xl border border-border bg-card p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                {m.avatar_url ? (
+                  <img src={m.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover" />
+                ) : (
+                  <span className="h-8 w-8 rounded-full bg-secondary" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1 text-sm font-medium truncate">
+                    {m.channel_name ?? "—"}
+                    {m.tier && <VerifiedBadge tier={m.tier as Tier} className="h-3.5 w-3.5" />}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {m.email} · {m.videos} vidéos {m.roles.length > 0 && `· ${m.roles.join(", ")}`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {TIERS.map((tier) => (
+                  <button
+                    key={tier}
+                    disabled={busy === m.id}
+                    onClick={() => setTier(m.id, tier)}
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold border ${
+                      m.tier === tier
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-secondary border-border text-muted-foreground"
+                    }`}
+                  >
+                    {tier}
+                  </button>
+                ))}
+                {m.tier && (
+                  <button
+                    disabled={busy === m.id}
+                    onClick={() => setTier(m.id, null)}
+                    className="rounded-lg px-2.5 py-1 text-[11px] font-semibold bg-secondary border border-border text-muted-foreground"
+                  >
+                    retirer badge
+                  </button>
+                )}
+                {(["admin", "moderator"] as const).map((role) => {
+                  const has = m.roles.includes(role);
+                  return (
+                    <button
+                      key={role}
+                      disabled={busy === m.id}
+                      onClick={() => toggleRole(m.id, role, !has)}
+                      className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold border ${
+                        has ? "bg-primary/20 text-primary border-primary/40" : "bg-secondary border-border text-muted-foreground"
+                      }`}
+                    >
+                      {has ? `− ${role}` : `+ ${role}`}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="font-semibold mb-2">Modération des contenus</h2>
+        <div className="space-y-2">
+          {videos.map((v) => (
+            <div key={v.id} className="rounded-xl border border-border bg-card p-3 flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium truncate">{v.title}</p>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  {v.channel_name ?? "—"} · {v.is_reel ? "Reel" : "Vidéo"} · {v.views} vues · {v.likes} likes ·{" "}
+                  {v.supav_count} SupaV
+                </p>
+              </div>
+              <button
+                disabled={busy === v.id}
+                onClick={() => removeVideo(v.id)}
+                className="shrink-0 rounded-lg bg-red-500/15 text-red-400 px-3 py-1.5 text-xs font-semibold hover:bg-red-500/25 disabled:opacity-60"
+              >
+                Supprimer
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }

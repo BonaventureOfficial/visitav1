@@ -9,6 +9,9 @@ import { formatCount } from "@/lib/format";
 import { maskEmail } from "@/lib/mask";
 import { setMyAvatar } from "@/lib/avatar-store";
 import { usePlayer } from "@/lib/player";
+import { VerifiedBadge, useVerification } from "@/components/VerifiedBadge";
+import { amIAdmin } from "@/lib/ranking.functions";
+import { ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/profile")({
@@ -58,6 +61,12 @@ function ProfilePage() {
   const [bioDraft, setBioDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const myTier = useVerification(user?.id);
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    amIAdmin().then((r) => setIsAdmin(r.admin)).catch(() => setIsAdmin(false));
+  }, [user]);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const thumbRef = useRef<HTMLInputElement>(null);
@@ -299,6 +308,7 @@ function ProfilePage() {
               ) : (
                 <div className="flex items-center gap-2">
                   <h1 className="font-display text-xl font-bold truncate">{channelName || t("myChannel")}</h1>
+                  {myTier && <VerifiedBadge tier={myTier} className="h-5 w-5" />}
                   <button
                     onClick={() => (nameLock.locked ? toast.error(`Name change available in ${nameLock.daysLeft} days`) : setEditName(true))}
                     className="shrink-0 rounded-full p-1.5 bg-secondary text-muted-foreground hover:text-foreground"
@@ -315,6 +325,16 @@ function ProfilePage() {
               <p className="text-xs text-primary">{formatCount(followerCount)} followers</p>
             </div>
 
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="rounded-full p-2.5 bg-primary/15 text-primary hover:bg-primary/25 shrink-0"
+                aria-label="Console de contrôle"
+                title="Console de contrôle absolu"
+              >
+                <ShieldCheck className="h-4 w-4" />
+              </Link>
+            )}
             <Link
               to="/settings"
               className="rounded-full p-2.5 bg-secondary hover:bg-accent text-muted-foreground hover:text-foreground shrink-0"
