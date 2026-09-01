@@ -299,6 +299,7 @@ function ProfilePage() {
               ) : (
                 <div className="flex items-center gap-2">
                   <h1 className="font-display text-xl font-bold truncate">{channelName || t("myChannel")}</h1>
+                  {myTier && <VerifiedBadge tier={myTier} className="h-5 w-5" />}
                   <button
                     onClick={() => (nameLock.locked ? toast.error(`Name change available in ${nameLock.daysLeft} days`) : setEditName(true))}
                     className="shrink-0 rounded-full p-1.5 bg-secondary text-muted-foreground hover:text-foreground"
