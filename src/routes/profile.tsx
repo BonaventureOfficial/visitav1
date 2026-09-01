@@ -61,6 +61,8 @@ function ProfilePage() {
   const [bioDraft, setBioDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const myTier = useVerification(user?.id);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const thumbRef = useRef<HTMLInputElement>(null);
