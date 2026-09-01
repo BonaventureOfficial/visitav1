@@ -119,6 +119,8 @@ function AdminPage() {
                 ))}
               </div>
             </section>
+
+            <ControlCenter />
           </>
         )}
       </div>
