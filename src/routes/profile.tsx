@@ -9,6 +9,9 @@ import { formatCount } from "@/lib/format";
 import { maskEmail } from "@/lib/mask";
 import { setMyAvatar } from "@/lib/avatar-store";
 import { usePlayer } from "@/lib/player";
+import { VerifiedBadge, useVerification } from "@/components/VerifiedBadge";
+import { amIAdmin } from "@/lib/ranking.functions";
+import { ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/profile")({
