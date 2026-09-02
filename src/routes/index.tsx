@@ -7,6 +7,7 @@ import { CommentsThread } from "@/components/CommentsThread";
 
 import { FollowButton } from "@/components/FollowButton";
 import { SupavButton } from "@/components/SupavButton";
+import { VerifiedBadge, useVerification } from "@/components/VerifiedBadge";
 import { useI18n } from "@/lib/i18n";
 
 import { useAuth } from "@/lib/auth";
@@ -205,6 +206,7 @@ function NowPlayingPinned() {
 function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow; initialLiked: boolean; avatarUrl: string | null; onAvatarClick: (url: string | null, name: string | null, userId?: string | null) => void }) {
   const { play, current } = usePlayer();
   const { user } = useAuth();
+  const ownerTier = useVerification(v.user_id);
   const isActive = current?.id === v.id;
 
   const [liked, setLiked] = useState(initialLiked);
