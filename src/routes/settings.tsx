@@ -12,7 +12,9 @@ import {
   EyeOff,
   HeartCrack,
   LogOut,
+  ShieldCheck,
 } from "lucide-react";
+import { amIAdmin } from "@/lib/ranking.functions";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,6 +89,12 @@ function SettingsPage() {
   });
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [savingKey, setSavingKey] = useState<IdentityKey | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    amIAdmin().then((r) => setIsAdmin(r.admin)).catch(() => setIsAdmin(false));
+  }, [user]);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth" });
@@ -244,6 +252,23 @@ function SettingsPage() {
             ))}
           </div>
         </div>
+
+        {isAdmin && (
+          <Link
+            to="/admin"
+            className="rounded-2xl bg-card border border-primary/40 p-4 flex items-center gap-3 hover:border-primary transition"
+          >
+            <span className="rounded-full gradient-brand p-2.5">
+              <ShieldCheck className="h-5 w-5 text-primary-foreground" />
+            </span>
+            <span>
+              <span className="block text-sm font-bold">Console de contrôle absolu</span>
+              <span className="block text-xs text-muted-foreground">
+                Membres, badges, rôles, modération, analytics du ranking
+              </span>
+            </span>
+          </Link>
+        )}
 
         <ChangeEmailCard currentEmail={user.email ?? ""} />
         <ChangePasswordCard email={user.email ?? ""} />
