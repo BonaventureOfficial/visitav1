@@ -309,7 +309,10 @@ function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow;
               (v.channel_name ?? "V").slice(0, 1).toUpperCase()
             )}
           </button>
-          <p className="text-xs text-muted-foreground truncate flex-1">{v.channel_name ?? ""}</p>
+          <p className="text-xs text-muted-foreground truncate flex items-center gap-1 flex-1">
+            <span className="truncate">{v.channel_name ?? ""}</span>
+            {ownerTier && <VerifiedBadge tier={ownerTier} className="h-3.5 w-3.5 shrink-0" />}
+          </p>
           <FollowButton ownerId={v.user_id} size="sm" showCount={false} />
         </div>
         <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
