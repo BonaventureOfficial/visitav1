@@ -7,6 +7,7 @@ import { CommentsThread } from "@/components/CommentsThread";
 
 import { FollowButton } from "@/components/FollowButton";
 import { SupavButton } from "@/components/SupavButton";
+import { VerifiedBadge, useVerification } from "@/components/VerifiedBadge";
 import { useI18n } from "@/lib/i18n";
 
 import { useAuth } from "@/lib/auth";
@@ -205,6 +206,7 @@ function NowPlayingPinned() {
 function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow; initialLiked: boolean; avatarUrl: string | null; onAvatarClick: (url: string | null, name: string | null, userId?: string | null) => void }) {
   const { play, current } = usePlayer();
   const { user } = useAuth();
+  const ownerTier = useVerification(v.user_id);
   const isActive = current?.id === v.id;
 
   const [liked, setLiked] = useState(initialLiked);
@@ -309,7 +311,10 @@ function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow;
               (v.channel_name ?? "V").slice(0, 1).toUpperCase()
             )}
           </button>
-          <p className="text-xs text-muted-foreground truncate flex-1">{v.channel_name ?? ""}</p>
+          <p className="text-xs text-muted-foreground truncate flex items-center gap-1 flex-1">
+            <span className="truncate">{v.channel_name ?? ""}</span>
+            {ownerTier && <VerifiedBadge tier={ownerTier} className="h-3.5 w-3.5 shrink-0" />}
+          </p>
           <FollowButton ownerId={v.user_id} size="sm" showCount={false} />
         </div>
         <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">

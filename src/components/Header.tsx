@@ -1,12 +1,15 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { ShieldCheck } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { ChannelSearch } from "@/components/ChannelSearch";
+import { useIsAdmin } from "@/lib/use-admin";
 import logo from "@/assets/logo.png";
 
 export function Header() {
   const { lang, setLang } = useI18n();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const showLang = pathname === "/";
+  const isAdmin = useIsAdmin();
 
   return (
     <header className="fixed top-0 inset-x-0 z-50 glass border-b border-border/40">
@@ -18,6 +21,17 @@ export function Header() {
           </span>
         </Link>
         {pathname === "/" && <ChannelSearch />}
+
+        {isAdmin && (
+          <Link
+            to="/admin"
+            className="ml-2 shrink-0 rounded-full p-2 bg-primary/15 text-primary hover:bg-primary/25 transition"
+            aria-label="Console de contrôle absolu"
+            title="Console de contrôle absolu"
+          >
+            <ShieldCheck className="h-4 w-4" />
+          </Link>
+        )}
 
         {showLang && (
           <div className="flex items-center gap-1 rounded-full bg-secondary p-1 text-xs font-medium">
