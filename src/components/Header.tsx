@@ -22,6 +22,17 @@ export function Header() {
         </Link>
         {pathname === "/" && <ChannelSearch />}
 
+        {isAdmin && (
+          <Link
+            to="/admin"
+            className="ml-2 shrink-0 rounded-full p-2 bg-primary/15 text-primary hover:bg-primary/25 transition"
+            aria-label="Console de contrôle absolu"
+            title="Console de contrôle absolu"
+          >
+            <ShieldCheck className="h-4 w-4" />
+          </Link>
+        )}
+
         {showLang && (
           <div className="flex items-center gap-1 rounded-full bg-secondary p-1 text-xs font-medium">
             <button
