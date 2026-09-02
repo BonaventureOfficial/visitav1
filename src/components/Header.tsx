@@ -1,12 +1,15 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { ShieldCheck } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { ChannelSearch } from "@/components/ChannelSearch";
+import { useIsAdmin } from "@/lib/use-admin";
 import logo from "@/assets/logo.png";
 
 export function Header() {
   const { lang, setLang } = useI18n();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const showLang = pathname === "/";
+  const isAdmin = useIsAdmin();
 
   return (
     <header className="fixed top-0 inset-x-0 z-50 glass border-b border-border/40">
