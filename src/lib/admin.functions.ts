@@ -12,11 +12,12 @@ export const adminListMembers = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase as never, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [{ data: profiles }, { data: roles }, { data: verifs }, { data: videos }] = await Promise.all([
-      supabaseAdmin.from("profiles").select("id,channel_name,email,avatar_url,created_at").order("created_at"),
-      supabaseAdmin.from("user_roles").select("user_id,role"),
-      supabaseAdmin.from("profile_verifications").select("user_id,tier"),
-      supabaseAdmin.from("videos").select("user_id"),
+    const [{ data: profiles }, { data: roles }, { data: verifs }, { data: stats }] = await Promise.all([
+      supabaseAdmin.from("profiles").select("id,channel_name,email,avatar_url,created_at")
+        .order("created_at", { ascending: false }).limit(500),
+      supabaseAdmin.from("user_roles").select("user_id,role").limit(2000),
+      supabaseAdmin.from("profile_verifications").select("user_id,tier").limit(2000),
+      supabaseAdmin.from("creator_stats").select("user_id,videos_count").limit(5000),
     ]);
 
     const roleMap = new Map<string, string[]>();
@@ -26,10 +27,10 @@ export const adminListMembers = createServerFn({ method: "POST" })
       roleMap.set(r.user_id, list);
     });
     const verifMap = new Map((verifs ?? []).map((v) => [v.user_id, v.tier as string]));
-    const videoCount = new Map<string, number>();
-    (videos ?? []).forEach((v) => {
-      if (v.user_id) videoCount.set(v.user_id, (videoCount.get(v.user_id) ?? 0) + 1);
-    });
+    const videoCount = new Map<string, number>(
+      (stats ?? []).map((s) => [s.user_id, s.videos_count ?? 0]),
+    );
+
 
     return (profiles ?? []).map((p) => ({
       id: p.id,
