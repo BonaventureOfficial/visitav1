@@ -303,13 +303,6 @@ function ProfilePage() {
 
   if (!user) return null;
 
-  const totals = videos.reduce(
-    (a, v) => ({
-      views: a.views + v.views, likes: a.likes + v.likes,
-      comments: a.comments + v.comments_count, supavs: a.supavs + (v.supav_count ?? 0),
-    }),
-    { views: 0, likes: 0, comments: 0, supavs: 0 },
-  );
 
   return (
     <AppLayout>
