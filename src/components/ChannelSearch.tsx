@@ -50,13 +50,14 @@ export function ChannelSearch() {
         return;
       }
       const { data: follows } = await (supabase as any)
-        .from("follows")
-        .select("following_id")
-        .in("following_id", rows.map((r) => r.id));
+        .from("creator_stats")
+        .select("user_id,followers")
+        .in("user_id", rows.map((r) => r.id));
       const counts = new Map<string, number>();
-      ((follows ?? []) as Array<{ following_id: string }>).forEach((f) =>
-        counts.set(f.following_id, (counts.get(f.following_id) ?? 0) + 1),
+      ((follows ?? []) as Array<{ user_id: string; followers: number }>).forEach((f) =>
+        counts.set(f.user_id, f.followers ?? 0),
       );
+
       if (!active) return;
       setHits(
         rows
