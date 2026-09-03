@@ -511,6 +511,19 @@ function ProfilePage() {
         );
         })()}
 
+        {hasMore && (
+          <div className="mt-3 flex justify-center">
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-foreground hover:bg-secondary/80 disabled:opacity-50 transition"
+            >
+              {loadingMore ? "..." : "Voir plus"}
+            </button>
+          </div>
+        )}
+
+
         <div className="mt-8 mb-3 flex items-center gap-2">
           <h2 className="font-display text-lg font-bold flex items-center gap-2">
             <HistoryIcon className="h-4 w-4 text-primary" /> Historique
