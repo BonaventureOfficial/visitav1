@@ -42,8 +42,15 @@ interface MyVideo {
   id: string; title: string; thumbnail_url: string | null; video_url: string | null;
   views: number; likes: number; comments_count: number; supav_count: number;
   channel_name: string | null; user_id: string | null; is_reel: boolean | null;
-  duration_seconds: number | null; description?: string | null;
+  duration_seconds: number | null; description?: string | null; created_at?: string;
 }
+
+/** Colonnes minimales pour la galerie (jamais de SELECT *). */
+const GALLERY_COLUMNS =
+  "id,title,description,thumbnail_url,video_url,views,likes,comments_count,supav_count,channel_name,user_id,is_reel,duration_seconds,created_at";
+/** Pagination keyset (pas d'OFFSET) pour supporter des millions de vidéos. */
+const GALLERY_PAGE = 24;
+
 
 function ProfilePage() {
   const { t } = useI18n();
