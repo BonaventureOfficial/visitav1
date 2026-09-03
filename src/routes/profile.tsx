@@ -42,8 +42,15 @@ interface MyVideo {
   id: string; title: string; thumbnail_url: string | null; video_url: string | null;
   views: number; likes: number; comments_count: number; supav_count: number;
   channel_name: string | null; user_id: string | null; is_reel: boolean | null;
-  duration_seconds: number | null; description?: string | null;
+  duration_seconds: number | null; description?: string | null; created_at?: string;
 }
+
+/** Colonnes minimales pour la galerie (jamais de SELECT *). */
+const GALLERY_COLUMNS =
+  "id,title,description,thumbnail_url,video_url,views,likes,comments_count,supav_count,channel_name,user_id,is_reel,duration_seconds,created_at";
+/** Pagination keyset (pas d'OFFSET) pour supporter des millions de vidéos. */
+const GALLERY_PAGE = 24;
+
 
 function ProfilePage() {
   const { t } = useI18n();
@@ -79,6 +86,9 @@ function ProfilePage() {
   const [titleDraft, setTitleDraft] = useState("");
   const [descDraft, setDescDraft] = useState("");
   const [history, setHistory] = useState<MyVideo[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [totals, setTotals] = useState({ views: 0, likes: 0, comments: 0, supavs: 0 });
 
   const nameLock = lockInfo(nameUpdatedAt);
   const bioLock = lockInfo(bioUpdatedAt);
@@ -87,12 +97,40 @@ function ProfilePage() {
     if (!loading && !user) navigate({ to: "/auth" });
   }, [loading, user, navigate]);
 
-  const reloadVideos = () => {
+  /** Charge une page keyset (curseur created_at) — jamais toute la table. */
+  const loadVideoPage = async (cursor?: string) => {
     if (!user) return;
-    supabase.from("videos").select("id,title,description,thumbnail_url,video_url,views,likes,comments_count,supav_count,channel_name,user_id,is_reel,duration_seconds")
-      .eq("user_id", user.id).order("created_at", { ascending: false })
-      .then(({ data }) => setVideos((data ?? []) as MyVideo[]));
+    let q = supabase.from("videos").select(GALLERY_COLUMNS)
+      .eq("user_id", user.id).order("created_at", { ascending: false }).limit(GALLERY_PAGE);
+    if (cursor) q = q.lt("created_at", cursor);
+    const { data } = await q;
+    const rows = (data ?? []) as MyVideo[];
+    setHasMore(rows.length === GALLERY_PAGE);
+    setVideos((prev) => (cursor ? [...prev, ...rows] : rows));
   };
+
+  const loadMore = async () => {
+    const last = videos[videos.length - 1];
+    if (!last?.created_at || loadingMore) return;
+    setLoadingMore(true);
+    await loadVideoPage(last.created_at);
+    setLoadingMore(false);
+  };
+
+  /** Compteurs agrégés : colonnes numériques uniquement, pas de recalcul lourd. */
+  const loadTotals = async () => {
+    if (!user) return;
+    const { data } = await supabase.from("videos")
+      .select("views,likes,comments_count,supav_count").eq("user_id", user.id).limit(5000);
+    const t = ((data ?? []) as Array<{ views: number; likes: number; comments_count: number; supav_count: number | null }>)
+      .reduce((a, v) => ({
+        views: a.views + v.views, likes: a.likes + v.likes,
+        comments: a.comments + v.comments_count, supavs: a.supavs + (v.supav_count ?? 0),
+      }), { views: 0, likes: 0, comments: 0, supavs: 0 });
+    setTotals(t);
+  };
+
+  const reloadVideos = () => { void loadVideoPage(); void loadTotals(); };
 
   const loadHistory = async () => {
     if (!user) return;
@@ -106,8 +144,9 @@ function ProfilePage() {
     }
     if (ids.length === 0) { setHistory([]); return; }
     const { data: vids } = await supabase.from("videos")
-      .select("id,title,description,thumbnail_url,video_url,views,likes,comments_count,supav_count,channel_name,user_id,is_reel,duration_seconds")
+      .select(GALLERY_COLUMNS)
       .in("id", ids);
+
     const map = new Map((vids ?? []).map((v: any) => [v.id, v as MyVideo]));
     setHistory(ids.map((id) => map.get(id)).filter(Boolean) as MyVideo[]);
   };
@@ -264,13 +303,6 @@ function ProfilePage() {
 
   if (!user) return null;
 
-  const totals = videos.reduce(
-    (a, v) => ({
-      views: a.views + v.views, likes: a.likes + v.likes,
-      comments: a.comments + v.comments_count, supavs: a.supavs + (v.supav_count ?? 0),
-    }),
-    { views: 0, likes: 0, comments: 0, supavs: 0 },
-  );
 
   return (
     <AppLayout>
@@ -478,6 +510,19 @@ function ProfilePage() {
           </div>
         );
         })()}
+
+        {hasMore && (
+          <div className="mt-3 flex justify-center">
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-foreground hover:bg-secondary/80 disabled:opacity-50 transition"
+            >
+              {loadingMore ? "..." : "Voir plus"}
+            </button>
+          </div>
+        )}
+
 
         <div className="mt-8 mb-3 flex items-center gap-2">
           <h2 className="font-display text-lg font-bold flex items-center gap-2">
