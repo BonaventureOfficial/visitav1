@@ -685,9 +685,10 @@ export type Database = {
         }
         Returns: boolean
       }
-      recompute_ranking:
-        | { Args: never; Returns: undefined }
-        | { Args: { _full?: boolean; _window?: string }; Returns: undefined }
+      recompute_ranking: {
+        Args: { _full?: boolean; _window?: string }
+        Returns: undefined
+      }
       record_video_event: {
         Args: {
           _duration_ms?: number
