@@ -393,30 +393,42 @@ export type Database = {
       }
       video_scores: {
         Row: {
+          category: string | null
+          created_at: string
           exploration_boost: number
           final_score: number
           freshness: number
+          is_reel: boolean
           quality_score: number
           trending_score: number
           updated_at: string
+          user_id: string | null
           video_id: string
         }
         Insert: {
+          category?: string | null
+          created_at?: string
           exploration_boost?: number
           final_score?: number
           freshness?: number
+          is_reel?: boolean
           quality_score?: number
           trending_score?: number
           updated_at?: string
+          user_id?: string | null
           video_id: string
         }
         Update: {
+          category?: string | null
+          created_at?: string
           exploration_boost?: number
           final_score?: number
           freshness?: number
+          is_reel?: boolean
           quality_score?: number
           trending_score?: number
           updated_at?: string
+          user_id?: string | null
           video_id?: string
         }
         Relationships: [
@@ -673,7 +685,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      recompute_ranking: { Args: never; Returns: undefined }
+      recompute_ranking:
+        | { Args: never; Returns: undefined }
+        | { Args: { _full?: boolean; _window?: string }; Returns: undefined }
       record_video_event: {
         Args: {
           _duration_ms?: number
