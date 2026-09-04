@@ -42,16 +42,21 @@ export const giveSupav = createServerFn({ method: "POST" })
     return (res ?? { ok: false, reason: "unknown" }) as { ok: boolean; reason?: string };
   });
 
-/** Recalcule les statistiques et scores de classement (admin). */
+/** Recalcule les statistiques et scores de classement (admin).
+ *  Par défaut incrémental : seuls les contenus actifs récemment sont recalculés. */
 export const recomputeRanking = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator(z.object({ full: z.boolean().optional() }).optional())
+  .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase as never, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.rpc("recompute_ranking" as never);
+    const { error } = await supabaseAdmin.rpc("recompute_ranking" as never, {
+      _full: data?.full ?? false,
+    } as never);
     if (error) throw new Error(error.message);
-    return { ok: true, at: new Date().toISOString() };
+    return { ok: true, at: new Date().toISOString(), mode: data?.full ? "full" : "incremental" };
   });
+
 
 /** Tableau de bord Analytics (admin uniquement). */
 export const getAdminAnalytics = createServerFn({ method: "POST" })
