@@ -656,8 +656,29 @@ export type Database = {
     }
     Functions: {
       award_supav: { Args: { _video_id: string }; Returns: Json }
+      get_creator_meta: {
+        Args: { _owner_ids: string[] }
+        Returns: {
+          avatar_url: string
+          bio: string
+          channel_name: string
+          followers: number
+          is_following: boolean
+          joined_at: string
+          tier: string
+          user_id: string
+        }[]
+      }
       get_ranked_feed: {
-        Args: { _is_reel?: boolean; _limit?: number; _user_id: string }
+        Args: {
+          _cursor_id?: string
+          _cursor_score?: number
+          _is_reel?: boolean
+          _limit?: number
+          _page?: number
+          _seed?: number
+          _user_id: string
+        }
         Returns: {
           category: string
           channel_name: string
