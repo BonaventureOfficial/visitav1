@@ -303,11 +303,13 @@ function NowPlayingPinned() {
 }
 
 
-function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow; initialLiked: boolean; avatarUrl: string | null; onAvatarClick: (url: string | null, name: string | null, userId?: string | null) => void }) {
+function VideoCard({ v, initialLiked, meta, onAvatarClick }: { v: VideoRow; initialLiked: boolean; meta: CreatorMeta | null; onAvatarClick: (url: string | null, name: string | null, userId?: string | null) => void }) {
   const { play, current } = usePlayer();
   const { user } = useAuth();
-  const ownerTier = useVerification(v.user_id);
+  const avatarUrl = meta?.avatar_url ?? null;
+  const ownerTier = meta?.tier ?? null;
   const isActive = current?.id === v.id;
+
 
   const [liked, setLiked] = useState(initialLiked);
   const [likes, setLikes] = useState(v.likes);
