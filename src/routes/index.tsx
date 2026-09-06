@@ -417,7 +417,14 @@ function VideoCard({ v, initialLiked, meta, onAvatarClick }: { v: VideoRow; init
             <span className="truncate">{v.channel_name ?? ""}</span>
             {ownerTier && <VerifiedBadge tier={ownerTier} className="h-3.5 w-3.5 shrink-0" />}
           </p>
-          <FollowButton ownerId={v.user_id} size="sm" showCount={false} />
+          <FollowButton
+            ownerId={v.user_id}
+            size="sm"
+            showCount={false}
+            initialFollowers={meta?.followers}
+            initialFollowing={meta?.is_following}
+          />
+
         </div>
         <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
           <button onClick={toggleLike} className={`flex items-center gap-1 transition ${liked ? "text-primary" : "hover:text-primary"}`} aria-label="Like">
