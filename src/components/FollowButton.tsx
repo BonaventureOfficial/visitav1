@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { formatCount } from "@/lib/format";
+import { patchCreatorMeta } from "@/lib/feed";
 
 export function FollowButton({
   ownerId,
@@ -69,6 +70,7 @@ export function FollowButton({
       const { error } = await supabase.from("follows").insert({ follower_id: user.id, following_id: ownerId });
       if (error && (error as any).code !== "23505") { setFollowing(false); setCount((c) => Math.max(0, c - 1)); }
     }
+    patchCreatorMeta(ownerId, { is_following: !following });
     setBusy(false);
   };
 
