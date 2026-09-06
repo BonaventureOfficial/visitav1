@@ -170,15 +170,20 @@ function EmptyReels() {
 }
 
 function ReelItem({
-  r, muted, onToggleMute, initialLiked, avatarUrl,
+  r, index, muted, onToggleMute, onActive, armed, preloadNext, initialLiked, meta,
 }: {
   r: ReelRow;
+  index: number;
   muted: boolean;
   onToggleMute: () => void;
+  onActive: (i: number) => void;
+  armed: boolean;
+  preloadNext: boolean;
   initialLiked: boolean;
-  avatarUrl: string | null;
+  meta: CreatorMeta | null;
 }) {
   const { user } = useAuth();
+  const avatarUrl = meta?.avatar_url ?? null;
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [visible, setVisible] = useState(false);
@@ -197,12 +202,17 @@ function ReelItem({
     const el = containerRef.current;
     if (!el) return;
     const io = new IntersectionObserver(
-      ([e]) => setVisible(e.isIntersecting && e.intersectionRatio > 0.6),
+      ([e]) => {
+        const isVisible = e.isIntersecting && e.intersectionRatio > 0.6;
+        setVisible(isVisible);
+        if (isVisible) onActive(index);
+      },
       { threshold: [0, 0.6, 1] },
     );
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [index]);
+
 
   useEffect(() => {
     const v = videoRef.current;
