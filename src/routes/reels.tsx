@@ -41,6 +41,8 @@ export const Route = createFileRoute("/reels")({
   component: ReelsPage,
 });
 
+const REEL_PAGE = 6;
+
 function ReelsPage() {
   const { user } = useAuth();
   const { t } = useI18n();
@@ -48,29 +50,75 @@ function ReelsPage() {
   const [loading, setLoading] = useState(true);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [muted, setMuted] = useState(false);
-  const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
+  const [meta, setMeta] = useState<Map<string, CreatorMeta>>(new Map());
+  const [activeIndex, setActiveIndex] = useState(0);
+  const cursorRef = useRef<FeedCursor | null>(null);
+  const seenRef = useRef<Set<string>>(new Set());
+  const doneRef = useRef(false);
+  const loadingMoreRef = useRef(false);
+  const prefetchRef = useRef<Promise<Awaited<ReturnType<typeof fetchFeedPage>>> | null>(null);
+
+  const hydrate = async (rows: ReelRow[]) => {
+    const owners = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean))) as string[];
+    if (owners.length > 0) {
+      const m = await fetchCreatorMeta(owners);
+      setMeta((prev) => { const n = new Map(prev); m.forEach((v, k) => n.set(k, v)); return n; });
+    }
+    if (user && rows.length > 0) {
+      const { data } = await (supabase as any)
+        .from("video_likes").select("video_id").eq("user_id", user.id).in("video_id", rows.map((r) => r.id));
+      setLikedIds((prev) => {
+        const n = new Set(prev);
+        (data ?? []).forEach((r: any) => n.add(r.video_id));
+        return n;
+      });
+    }
+  };
+
+  const append = (page: Awaited<ReturnType<typeof fetchFeedPage>>) => {
+    const fresh = page.rows.filter((r) => !seenRef.current.has(r.id));
+    fresh.forEach((r) => seenRef.current.add(r.id));
+    cursorRef.current = page.cursor;
+    doneRef.current = page.done || !page.cursor;
+    if (fresh.length > 0) {
+      setReels((prev) => [...prev, ...(fresh as unknown as ReelRow[])]);
+      void hydrate(fresh as unknown as ReelRow[]);
+    }
+    return fresh.length;
+  };
 
   useEffect(() => {
-    fetchRankedFeed({ isReel: true, userId: user?.id ?? null, limit: 60 })
-      .then((rows) => { setReels(rows as unknown as ReelRow[]); setLoading(false); });
+    let alive = true;
+    setLoading(true);
+    setReels([]);
+    setLikedIds(new Set());
+    seenRef.current = new Set();
+    cursorRef.current = null;
+    prefetchRef.current = null;
+    doneRef.current = false;
+    fetchFeedPage({ isReel: true, userId: user?.id ?? null, limit: REEL_PAGE, cursor: null })
+      .then((page) => { if (!alive) return; append(page); setLoading(false); })
+      .catch(() => alive && setLoading(false));
+    return () => { alive = false; };
   }, [user?.id]);
 
-  useEffect(() => {
-    if (!user || reels.length === 0) { setLikedIds(new Set()); return; }
-    const ids = reels.map((r) => r.id);
-    (supabase as any).from("video_likes").select("video_id").eq("user_id", user.id).in("video_id", ids)
-      .then(({ data }: any) => setLikedIds(new Set((data ?? []).map((r: any) => r.video_id))));
-  }, [user?.id, reels]);
+  /** Une seule page d'avance, déclenchée à 3 reels de la fin. */
+  const loadMore = async () => {
+    if (doneRef.current || loadingMoreRef.current || !cursorRef.current) return;
+    loadingMoreRef.current = true;
+    try {
+      const req = prefetchRef.current ?? fetchFeedPage({
+        isReel: true, userId: user?.id ?? null, limit: REEL_PAGE, cursor: cursorRef.current,
+      });
+      prefetchRef.current = null;
+      append(await req);
+    } catch { /* on garde la liste courante */ }
+    loadingMoreRef.current = false;
+  };
 
   useEffect(() => {
-    const ownerIds = Array.from(new Set(reels.map((r) => r.user_id).filter(Boolean))) as string[];
-    if (ownerIds.length === 0) return;
-    supabase.from("profiles").select("id,avatar_url").in("id", ownerIds).then(({ data }) => {
-      const m = new Map<string, string>();
-      (data ?? []).forEach((p: any) => { if (p.avatar_url) m.set(p.id, p.avatar_url); });
-      setAvatars(m);
-    });
-  }, [reels]);
+    if (reels.length > 0 && activeIndex >= reels.length - 3) void loadMore();
+  }, [activeIndex, reels.length]);
 
   return (
     <AppLayout>
@@ -83,14 +131,20 @@ function ReelsPage() {
         ) : reels.length === 0 ? (
           <EmptyReels />
         ) : (
-          reels.map((r) => (
+          reels.map((r, i) => (
             <ReelItem
               key={r.id}
               r={r}
+              index={i}
               muted={muted}
               onToggleMute={() => setMuted((m) => !m)}
+              onActive={setActiveIndex}
+              /* la vidéo n'est attachée que pour le reel courant et le suivant :
+                 aucun téléchargement inutile, navigation instantanée */
+              armed={i <= activeIndex + 1 && i >= activeIndex - 1}
+              preloadNext={i === activeIndex + 1}
               initialLiked={likedIds.has(r.id)}
-              avatarUrl={r.user_id ? avatars.get(r.user_id) ?? null : null}
+              meta={r.user_id ? meta.get(r.user_id) ?? null : null}
             />
           ))
         )}
@@ -98,6 +152,7 @@ function ReelsPage() {
     </AppLayout>
   );
 }
+
 
 function EmptyReels() {
   return (
