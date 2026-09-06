@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, Play, Film, Heart, MessageCircle, Share2, Zap, CalendarDays } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { CategoryMarquee } from "@/components/CategoryMarquee";
@@ -7,16 +7,18 @@ import { CommentsThread } from "@/components/CommentsThread";
 
 import { FollowButton } from "@/components/FollowButton";
 import { SupavButton } from "@/components/SupavButton";
-import { VerifiedBadge, useVerification } from "@/components/VerifiedBadge";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useI18n } from "@/lib/i18n";
 
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchRankedFeed } from "@/lib/feed";
+import { fetchFeedPage, fetchCreatorMeta } from "@/lib/feed";
+import type { FeedCursor, FeedPage as FeedPageT, CreatorMeta } from "@/lib/feed";
 import { track, trackImpression } from "@/lib/track";
 import { formatCount, timeAgo } from "@/lib/format";
 import { usePlayer, useVideoHost } from "@/lib/player";
 import { toast } from "sonner";
+
 
 interface VideoRow {
   id: string;
