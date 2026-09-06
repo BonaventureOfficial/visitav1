@@ -330,20 +330,33 @@ function ReelItem({
       style={{ height: "calc(100dvh - 64px)" }}
     >
       {r.video_url ? (
-        <video
-          ref={videoRef}
-          src={r.video_url}
-          poster={r.thumbnail_url ?? undefined}
-          playsInline
-          loop
-          muted={muted}
-          preload="metadata"
-          onClick={togglePlay}
-          className="absolute inset-0 h-full w-full object-cover"
-        />
+        armed ? (
+          <video
+            ref={videoRef}
+            src={r.video_url}
+            poster={r.thumbnail_url ?? undefined}
+            playsInline
+            loop
+            muted={muted}
+            /* courant : métadonnées + lecture ; suivant : métadonnées seules (préparation légère) */
+            preload={preloadNext ? "metadata" : "auto"}
+            onClick={togglePlay}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          /* hors fenêtre : uniquement la miniature, aucune vidéo téléchargée */
+          <img
+            src={r.thumbnail_url ?? undefined}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        )
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-secondary to-card" />
       )}
+
 
       {/* Gradient overlay bottom */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
