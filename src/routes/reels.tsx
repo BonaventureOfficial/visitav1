@@ -404,7 +404,14 @@ function ReelItem({
             )}
           </div>
           <span className="font-semibold text-sm truncate flex-1">{r.channel_name ?? "Visita"}</span>
-          <FollowButton ownerId={r.user_id} size="sm" showCount={false} />
+          <FollowButton
+            ownerId={r.user_id}
+            size="sm"
+            showCount={false}
+            initialFollowers={meta?.followers}
+            initialFollowing={meta?.is_following}
+          />
+
         </div>
         <h2 className="mt-2 text-sm font-semibold leading-snug line-clamp-2">{r.title}</h2>
         {r.description && (
