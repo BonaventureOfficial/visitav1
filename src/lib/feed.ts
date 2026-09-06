@@ -220,11 +220,11 @@ export async function fetchCreatorMeta(ownerIds: string[]): Promise<Map<string, 
   const key = missing.slice().sort().join(",");
   let req = metaInflight.get(key);
   if (!req) {
-    req = db
-      .rpc("get_creator_meta", { _owner_ids: missing })
+    req = Promise.resolve(db.rpc("get_creator_meta", { _owner_ids: missing }))
       .then(({ data }) => (Array.isArray(data) ? (data as CreatorMeta[]) : []))
       .catch(() => [] as CreatorMeta[])
-      .finally(() => metaInflight.delete(key)) as Promise<CreatorMeta[]>;
+      .finally(() => metaInflight.delete(key));
+
     metaInflight.set(key, req);
   }
   const rows = await req;

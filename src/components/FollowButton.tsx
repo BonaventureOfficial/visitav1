@@ -4,23 +4,35 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { formatCount } from "@/lib/format";
+import { patchCreatorMeta } from "@/lib/feed";
 
 export function FollowButton({
   ownerId,
   size = "sm",
   showCount = true,
+  initialFollowers,
+  initialFollowing,
 }: {
   ownerId: string | null | undefined;
   size?: "sm" | "md";
   showCount?: boolean;
+  /** Fournis par un chargement batché (get_creator_meta) : évite 2 requêtes par carte. */
+  initialFollowers?: number;
+  initialFollowing?: boolean;
 }) {
   const { user } = useAuth();
-  const [following, setFollowing] = useState(false);
-  const [count, setCount] = useState(0);
+  const batched = initialFollowers !== undefined;
+  const [following, setFollowing] = useState(initialFollowing ?? false);
+  const [count, setCount] = useState(initialFollowers ?? 0);
   const [busy, setBusy] = useState(false);
   const isSelf = !!(user && ownerId && user.id === ownerId);
 
   useEffect(() => {
+    if (batched) {
+      setCount(initialFollowers ?? 0);
+      setFollowing(!!initialFollowing);
+      return;
+    }
     if (!ownerId) return;
     supabase
       .from("follows")
@@ -36,7 +48,8 @@ export function FollowButton({
         .maybeSingle()
         .then(({ data }) => setFollowing(!!data));
     } else setFollowing(false);
-  }, [user?.id, ownerId, isSelf]);
+  }, [user?.id, ownerId, isSelf, batched, initialFollowers, initialFollowing]);
+
 
   if (!ownerId || isSelf) {
     return showCount ? (
@@ -57,6 +70,7 @@ export function FollowButton({
       const { error } = await supabase.from("follows").insert({ follower_id: user.id, following_id: ownerId });
       if (error && (error as any).code !== "23505") { setFollowing(false); setCount((c) => Math.max(0, c - 1)); }
     }
+    patchCreatorMeta(ownerId, { is_following: !following });
     setBusy(false);
   };
 

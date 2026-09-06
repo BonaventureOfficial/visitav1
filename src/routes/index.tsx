@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, Play, Film, Heart, MessageCircle, Share2, Zap, CalendarDays } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { CategoryMarquee } from "@/components/CategoryMarquee";
@@ -7,16 +7,18 @@ import { CommentsThread } from "@/components/CommentsThread";
 
 import { FollowButton } from "@/components/FollowButton";
 import { SupavButton } from "@/components/SupavButton";
-import { VerifiedBadge, useVerification } from "@/components/VerifiedBadge";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useI18n } from "@/lib/i18n";
 
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchRankedFeed } from "@/lib/feed";
+import { fetchFeedPage, fetchCreatorMeta } from "@/lib/feed";
+import type { FeedCursor, FeedPage as FeedPageT, CreatorMeta } from "@/lib/feed";
 import { track, trackImpression } from "@/lib/track";
 import { formatCount, timeAgo } from "@/lib/format";
 import { usePlayer, useVideoHost } from "@/lib/player";
 import { toast } from "sonner";
+
 
 interface VideoRow {
   id: string;
@@ -53,6 +55,8 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
+const PAGE_SIZE = 12;
+
 function Home() {
   const { channel } = Route.useSearch();
 
@@ -60,39 +64,116 @@ function Home() {
   const [filter, setFilter] = useState<string>("all");
   const [videos, setVideos] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [done, setDone] = useState(false);
+  const cursorRef = useRef<FeedCursor | null>(null);
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const prefetchRef = useRef<Promise<FeedPageT> | null>(null);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
-  const [avatars, setAvatars] = useState<Map<string, string>>(new Map());
-  const [profileInfo, setProfileInfo] = useState<Map<string, { bio: string | null; created_at: string | null }>>(new Map());
+  const [meta, setMeta] = useState<Map<string, CreatorMeta>>(new Map());
   const [bigAvatar, setBigAvatar] = useState<{ url: string; name: string; bio: string | null; joined: string | null } | null>(null);
 
+  /** Enrichissement batché : profils + badges + abonnés + suivi, 1 seul appel/page. */
+  const hydrateMeta = async (rows: VideoRow[]) => {
+    const owners = Array.from(new Set(rows.map((v) => v.user_id).filter(Boolean))) as string[];
+    if (owners.length === 0) return;
+    const m = await fetchCreatorMeta(owners);
+    setMeta((prev) => {
+      const next = new Map(prev);
+      m.forEach((v, k) => next.set(k, v));
+      return next;
+    });
+  };
+
+  /** Likes de l'utilisateur : uniquement pour les nouveaux ids de la page. */
+  const hydrateLikes = async (rows: VideoRow[]) => {
+    if (!user || rows.length === 0) return;
+    const ids = rows.map((r) => r.id);
+    const { data } = await (supabase as any)
+      .from("video_likes").select("video_id").eq("user_id", user.id).in("video_id", ids);
+    setLikedIds((prev) => {
+      const next = new Set(prev);
+      (data ?? []).forEach((r: any) => next.add(r.video_id));
+      return next;
+    });
+  };
+
+  const appendPage = (page: FeedPageT) => {
+    const fresh = page.rows.filter((r) => !seenIdsRef.current.has(r.id));
+    fresh.forEach((r) => seenIdsRef.current.add(r.id));
+    cursorRef.current = page.cursor;
+    setDone(page.done || !page.cursor);
+    if (fresh.length > 0) {
+      setVideos((prev) => [...prev, ...(fresh as unknown as VideoRow[])]);
+      void hydrateMeta(fresh as unknown as VideoRow[]);
+      void hydrateLikes(fresh as unknown as VideoRow[]);
+    }
+    return fresh.length;
+  };
+
+  // Page initiale (et rechargement à la connexion/déconnexion)
   useEffect(() => {
-    fetchRankedFeed({ isReel: false, userId: user?.id ?? null, limit: 60 })
-      .then((rows) => { setVideos(rows as unknown as VideoRow[]); setLoading(false); });
+    let alive = true;
+    setLoading(true);
+    setVideos([]);
+    setLikedIds(new Set());
+    seenIdsRef.current = new Set();
+    cursorRef.current = null;
+    prefetchRef.current = null;
+    setDone(false);
+    fetchFeedPage({ isReel: false, userId: user?.id ?? null, limit: PAGE_SIZE, cursor: null })
+      .then((page) => {
+        if (!alive) return;
+        appendPage(page);
+        setLoading(false);
+      })
+      .catch(() => alive && setLoading(false));
+    return () => { alive = false; };
   }, [user?.id]);
 
-  useEffect(() => {
-    if (!user || videos.length === 0) { setLikedIds(new Set()); return; }
-    const ids = videos.map((v) => v.id);
-    (supabase as any).from("video_likes").select("video_id").eq("user_id", user.id).in("video_id", ids)
-      .then(({ data }: any) => setLikedIds(new Set((data ?? []).map((r: any) => r.video_id))));
-  }, [user?.id, videos]);
+  /** Prefetch contrôlé : une seule page d'avance, jamais plus. */
+  const prefetchNext = () => {
+    if (done || loadingMore || prefetchRef.current || !cursorRef.current) return;
+    prefetchRef.current = fetchFeedPage({
+      isReel: false, userId: user?.id ?? null, limit: PAGE_SIZE, cursor: cursorRef.current,
+    });
+  };
 
-  useEffect(() => {
-    const ownerIds = Array.from(new Set(videos.map((v) => v.user_id).filter(Boolean))) as string[];
-    if (ownerIds.length === 0) return;
-    supabase.from("profiles").select("id,avatar_url,bio,created_at").in("id", ownerIds)
-      .then(({ data }) => {
-        const m = new Map<string, string>();
-        const info = new Map<string, { bio: string | null; created_at: string | null }>();
-        (data ?? []).forEach((p: any) => {
-          if (p.avatar_url) m.set(p.id, p.avatar_url);
-          info.set(p.id, { bio: p.bio ?? null, created_at: p.created_at ?? null });
-        });
-        setAvatars(m);
-        setProfileInfo(info);
+  const loadMore = async () => {
+    if (done || loadingMore || !cursorRef.current) return;
+    setLoadingMore(true);
+    try {
+      const req = prefetchRef.current ?? fetchFeedPage({
+        isReel: false, userId: user?.id ?? null, limit: PAGE_SIZE, cursor: cursorRef.current,
       });
-  }, [videos]);
+      prefetchRef.current = null;
+      const page = await req;
+      const added = appendPage(page);
+      if (added === 0 && page.cursor) {
+        // page entièrement dédupliquée : on avance sans boucler
+        const next = await fetchFeedPage({ isReel: false, userId: user?.id ?? null, limit: PAGE_SIZE, cursor: page.cursor });
+        appendPage(next);
+      }
+    } catch { /* fil déjà affiché : on ignore */ }
+    setLoadingMore(false);
+  };
 
+  // Sentinelle de défilement infini : prefetch à l'approche, chargement à l'entrée
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => { if (entries.some((e) => e.isIntersecting)) void loadMore(); },
+      { rootMargin: "600px 0px" },
+    );
+    const pre = new IntersectionObserver(
+      (entries) => { if (entries.some((e) => e.isIntersecting)) prefetchNext(); },
+      { rootMargin: "1600px 0px" },
+    );
+    io.observe(el); pre.observe(el);
+    return () => { io.disconnect(); pre.disconnect(); };
+  }, [videos.length, done, loadingMore, user?.id]);
 
   const list = useMemo(() => {
     let rows = videos;
@@ -106,8 +187,8 @@ function Home() {
 
   const openAvatar = (url: string | null, name: string | null, userId?: string | null) => {
     if (!url) return;
-    const info = userId ? profileInfo.get(userId) : undefined;
-    setBigAvatar({ url, name: name ?? "", bio: info?.bio ?? null, joined: info?.created_at ?? null });
+    const info = userId ? meta.get(userId) : undefined;
+    setBigAvatar({ url, name: name ?? "", bio: info?.bio ?? null, joined: info?.joined_at ?? null });
   };
 
   return (
@@ -129,10 +210,29 @@ function Home() {
         ) : list.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {list.map((v) => <VideoCard key={v.id} v={v} initialLiked={likedIds.has(v.id)} avatarUrl={v.user_id ? avatars.get(v.user_id) ?? null : null} onAvatarClick={openAvatar} />)}
-          </div>
+          <>
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {list.map((v) => (
+                <VideoCard
+                  key={v.id}
+                  v={v}
+                  initialLiked={likedIds.has(v.id)}
+                  meta={v.user_id ? meta.get(v.user_id) ?? null : null}
+                  onAvatarClick={openAvatar}
+                />
+              ))}
+            </div>
+            <div ref={sentinelRef} className="h-10" />
+            {loadingMore && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="aspect-video rounded-2xl bg-card animate-pulse" />
+                ))}
+              </div>
+            )}
+          </>
         )}
+
         <div className="h-4" />
       </section>
 
@@ -203,11 +303,13 @@ function NowPlayingPinned() {
 }
 
 
-function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow; initialLiked: boolean; avatarUrl: string | null; onAvatarClick: (url: string | null, name: string | null, userId?: string | null) => void }) {
+function VideoCard({ v, initialLiked, meta, onAvatarClick }: { v: VideoRow; initialLiked: boolean; meta: CreatorMeta | null; onAvatarClick: (url: string | null, name: string | null, userId?: string | null) => void }) {
   const { play, current } = usePlayer();
   const { user } = useAuth();
-  const ownerTier = useVerification(v.user_id);
+  const avatarUrl = meta?.avatar_url ?? null;
+  const ownerTier = meta?.tier ?? null;
   const isActive = current?.id === v.id;
+
 
   const [liked, setLiked] = useState(initialLiked);
   const [likes, setLikes] = useState(v.likes);
@@ -315,7 +417,14 @@ function VideoCard({ v, initialLiked, avatarUrl, onAvatarClick }: { v: VideoRow;
             <span className="truncate">{v.channel_name ?? ""}</span>
             {ownerTier && <VerifiedBadge tier={ownerTier} className="h-3.5 w-3.5 shrink-0" />}
           </p>
-          <FollowButton ownerId={v.user_id} size="sm" showCount={false} />
+          <FollowButton
+            ownerId={v.user_id}
+            size="sm"
+            showCount={false}
+            initialFollowers={meta?.followers}
+            initialFollowing={meta?.is_following}
+          />
+
         </div>
         <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
           <button onClick={toggleLike} className={`flex items-center gap-1 transition ${liked ? "text-primary" : "hover:text-primary"}`} aria-label="Like">
