@@ -147,21 +147,46 @@ function Stat({ label, value }: { label: string; value: number | string }) {
 }
 
 type Member = Awaited<ReturnType<typeof adminListMembers>>[number];
-type RecentVideo = Awaited<ReturnType<typeof adminRecentVideos>>[number];
+type VideoPage = Awaited<ReturnType<typeof adminRecentVideos>>;
+type RecentVideo = VideoPage["items"][number];
 
 const TIERS = ["platinum", "gold", "blue"] as const;
 
 function ControlCenter() {
   const [members, setMembers] = useState<Member[]>([]);
   const [videos, setVideos] = useState<RecentVideo[]>([]);
+  const [vNext, setVNext] = useState<VideoPage["next"]>(null);
+  const [vLoading, setVLoading] = useState(false);
+  const [vq, setVq] = useState("");
+  const [vtype, setVtype] = useState<"all" | "video" | "reel">("all");
+  const [toDelete, setToDelete] = useState<RecentVideo | null>(null);
+  const [confirmText, setConfirmText] = useState("");
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
 
+  const loadVideos = async (reset: boolean) => {
+    setVLoading(true);
+    try {
+      const res = await adminRecentVideos({
+        data: { q: vq, type: vtype, cursor: reset ? null : vNext },
+      });
+      setVideos((prev) => (reset ? res.items : [...prev, ...res.items.filter((i) => !prev.some((p) => p.id === i.id))]));
+      setVNext(res.next);
+    } catch {
+      /* ignore */
+    }
+    setVLoading(false);
+  };
+
   const load = () => {
     adminListMembers().then(setMembers).catch(() => {});
-    adminRecentVideos().then(setVideos).catch(() => {});
   };
   useEffect(load, []);
+  useEffect(() => {
+    const t = setTimeout(() => loadVideos(true), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vq, vtype]);
 
   const setTier = async (userId: string, tier: (typeof TIERS)[number] | null) => {
     setBusy(userId);
@@ -192,7 +217,7 @@ function ControlCenter() {
     try {
       await adminDeleteVideo({ data: { videoId } });
       toast.success("Vidéo supprimée");
-      load();
+      setVideos((prev) => prev.filter((v) => v.id !== videoId));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Suppression impossible");
     }
@@ -284,6 +309,23 @@ function ControlCenter() {
 
       <section>
         <h2 className="font-semibold mb-2">Modération des contenus</h2>
+        <div className="flex gap-2 mb-2">
+          <input
+            value={vq}
+            onChange={(e) => setVq(e.target.value)}
+            placeholder="Rechercher un titre ou une chaîne…"
+            className="flex-1 h-10 rounded-xl bg-secondary border border-border px-3 text-sm outline-none focus:border-primary"
+          />
+          <select
+            value={vtype}
+            onChange={(e) => setVtype(e.target.value as typeof vtype)}
+            className="h-10 rounded-xl bg-secondary border border-border px-2 text-sm"
+          >
+            <option value="all">Tous</option>
+            <option value="video">Vidéos</option>
+            <option value="reel">Reels</option>
+          </select>
+        </div>
         <div className="space-y-2">
           {videos.map((v) => (
             <div key={v.id} className="rounded-xl border border-border bg-card p-3 flex items-center gap-3">
@@ -296,15 +338,67 @@ function ControlCenter() {
               </div>
               <button
                 disabled={busy === v.id}
-                onClick={() => removeVideo(v.id)}
-                className="shrink-0 rounded-lg bg-red-500/15 text-red-400 px-3 py-1.5 text-xs font-semibold hover:bg-red-500/25 disabled:opacity-60"
+                onClick={() => {
+                  setConfirmText("");
+                  setToDelete(v);
+                }}
+                className="shrink-0 rounded-lg bg-destructive/15 text-destructive px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
               >
                 Supprimer
               </button>
             </div>
           ))}
+          {!vLoading && videos.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">Aucun contenu trouvé.</p>
+          )}
+          {vNext && (
+            <button
+              disabled={vLoading}
+              onClick={() => loadVideos(false)}
+              className="w-full h-10 rounded-xl border border-border bg-secondary text-sm font-medium disabled:opacity-60"
+            >
+              {vLoading ? "Chargement…" : "Voir plus"}
+            </button>
+          )}
         </div>
       </section>
+
+      {toDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-4 space-y-3">
+            <h3 className="font-semibold">Supprimer ce contenu ?</h3>
+            <p className="text-sm text-muted-foreground">
+              « {toDelete.title} » sera supprimé définitivement. Tapez <b className="text-foreground">CONFIRMER</b> pour valider.
+            </p>
+            <input
+              autoFocus
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="CONFIRMER"
+              className="w-full h-10 rounded-xl bg-secondary border border-border px-3 text-sm outline-none focus:border-primary"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => setToDelete(null)}
+                className="flex-1 h-10 rounded-xl border border-border bg-secondary text-sm"
+              >
+                Annuler
+              </button>
+              <button
+                disabled={confirmText.trim().toUpperCase() !== "CONFIRMER" || busy === toDelete.id}
+                onClick={async () => {
+                  const id = toDelete.id;
+                  await removeVideo(id);
+                  setToDelete(null);
+                }}
+                className="flex-1 h-10 rounded-xl bg-destructive text-destructive-foreground text-sm font-semibold disabled:opacity-40"
+              >
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
