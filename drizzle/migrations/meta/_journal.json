@@ -8,6 +8,13 @@
       "when": 1790876302397,
       "tag": "0000_admin_content_search_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790878066869,
+      "tag": "0001_videos_title_trgm",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_videos_title_trgm ON public.videos USING gin (title extensions.gin_trgm_ops);
