@@ -107,16 +107,44 @@ export const adminDeleteVideo = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Dernières vidéos publiées, pour modération (admin). */
+/** Contenus pour modération : paginés (keyset), filtrables, recherche par titre (admin). */
 export const adminRecentVideos = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator(
+    z
+      .object({
+        q: z.string().max(100).optional(),
+        type: z.enum(["all", "video", "reel"]).optional(),
+        cursor: z.object({ created_at: z.string(), id: z.string().uuid() }).nullable().optional(),
+      })
+      .optional(),
+  )
+  .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase as never, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await supabaseAdmin
+    const PAGE = 20;
+    let query = supabaseAdmin
       .from("videos")
       .select("id,title,channel_name,views,likes,supav_count,is_reel,created_at")
       .order("created_at", { ascending: false })
-      .limit(40);
-    return data ?? [];
+      .order("id", { ascending: false })
+      .limit(PAGE + 1);
+    const type = data?.type ?? "all";
+    if (type !== "all") query = query.eq("is_reel", type === "reel");
+    const q = data?.q?.trim().replace(/[%_,()]/g, " ");
+    if (q) query = query.or(`title.ilike.%${q}%,channel_name.ilike.%${q}%`);
+    const c = data?.cursor;
+    if (c) {
+      query = query.or(`created_at.lt.${c.created_at},and(created_at.eq.${c.created_at},id.lt.${c.id})`);
+    }
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
+    const list = rows ?? [];
+    const hasMore = list.length > PAGE;
+    const items = list.slice(0, PAGE);
+    const last = items[items.length - 1];
+    return {
+      items,
+      next: hasMore && last ? { created_at: last.created_at, id: last.id } : null,
+    };
   });
