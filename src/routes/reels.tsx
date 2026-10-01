@@ -214,15 +214,22 @@ function ReelItem({
   }, [index]);
 
 
+  // Lecture automatique au scroll : si le navigateur bloque le son, on relance en muet.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     if (visible && !paused) {
-      v.play().catch(() => {});
+      v.play().catch(() => {
+        v.muted = true;
+        v.play().catch(() => {});
+      });
     } else {
       v.pause();
     }
-  }, [visible, paused]);
+  }, [visible, paused, armed]);
+
+  // Un reel qui redevient visible repart toujours en lecture.
+  useEffect(() => { if (visible) setPaused(false); }, [visible]);
 
   useEffect(() => {
     const v = videoRef.current;
