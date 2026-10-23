@@ -132,7 +132,7 @@ export function ChannelSearch() {
   const empty = !loading && hits.length === 0 && videos.length === 0;
 
   return (
-    <div ref={boxRef} className="relative flex-1 max-w-xs mx-3">
+    <div ref={boxRef} className="relative min-w-0 w-full sm:max-w-xs sm:mx-auto">
       <div className="flex items-center gap-2 rounded-full bg-secondary border border-border/60 px-3 h-9 focus-within:border-primary transition">
         <Search className="h-4 w-4 text-muted-foreground shrink-0" />
         <input
@@ -151,7 +151,7 @@ export function ChannelSearch() {
       </div>
 
       {open && q.trim() && (
-        <div className="absolute left-0 right-0 top-11 z-50 max-h-[70vh] overflow-y-auto rounded-2xl border border-border/60 bg-card shadow-2xl">
+        <div className="fixed left-2 right-2 top-16 sm:absolute sm:inset-x-0 sm:top-11 z-50 max-h-[70vh] overflow-y-auto rounded-lg border border-border/60 bg-card shadow-2xl">
           {loading && <p className="px-3 py-3 text-xs text-muted-foreground">Searching…</p>}
           {empty && <p className="px-3 py-3 text-xs text-muted-foreground">No result</p>}
 
