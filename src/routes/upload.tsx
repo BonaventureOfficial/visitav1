@@ -6,21 +6,30 @@ import { useAuth } from "@/lib/auth";
 import { useI18n, CATEGORIES } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { PostComposer } from "@/components/PostComposer";
 
 export const Route = createFileRoute("/upload")({
-  head: () => ({ meta: [{ title: "New video — Visita" }] }),
+  head: () => ({ meta: [
+    { title: "Publish — Visita" },
+    { name: "description", content: "Publish videos, Reels, text and photos on Visita." },
+    { property: "og:title", content: "Publish — Visita" },
+    { property: "og:description", content: "Publish videos, Reels, text and photos on Visita." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: UploadPage,
 });
 
 type Cat = "music" | "podcast" | "documentary" | "news" | "comedy" | "games" | "sports" | "kids" | "lifestyle" | "tech" | "emission";
-type Kind = "video" | "reel";
+type Kind = "video" | "reel" | "text" | "photo";
 
 const YEAR = 60 * 60 * 24 * 365;
 const REEL_MAX_SECONDS = 120;
 const VIDEO_MAX_SECONDS = 7200; // 2 heures
 
 function UploadPage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -167,8 +176,9 @@ function UploadPage() {
       setProgress(70);
 
       // Thumbnail
-      const thumbBlob =
-        selectedThumb === "custom" ? customThumb!.blob : dataUrlToBlob(frames[selectedThumb]);
+      if (selectedThumb === "custom" && !customThumb) throw new Error("Thumbnail required");
+      const thumbBlob = selectedThumb === "custom" && customThumb
+        ? customThumb.blob : dataUrlToBlob(frames[typeof selectedThumb === "number" ? selectedThumb : 0]);
       const thumbExt = thumbBlob.type === "image/png" ? "png" : "jpg";
       const thumbPath = `${user.id}/${id}.${thumbExt}`;
       const { error: tErr } = await supabase.storage
@@ -220,15 +230,21 @@ function UploadPage() {
   return (
     <AppLayout>
       <section className="mx-auto max-w-2xl px-4 pt-6">
-        <h1 className="font-display text-2xl font-bold">{t("uploadTitle")}</h1>
+        <h1 className="font-display text-2xl font-bold">{t("publish")}</h1>
+        <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2" role="group" aria-label={t("chooseType")}>
+          {(["video", "reel", "text", "photo"] as const).map((k) => <Button key={k} type="button" variant={kind === k ? "default" : "outline"} aria-pressed={kind === k} onClick={() => setKind(k)} className="h-11 px-2">
+            {k === "video" ? <Film /> : k === "reel" ? <Film /> : k === "photo" ? <ImageIcon /> : <span aria-hidden="true">T</span>}
+            {k === "video" ? t("longVideo") : k === "reel" ? t("reel") : k === "text" ? (lang === "fr" ? "Texte" : "Text") : "Photo"}
+          </Button>)}
+        </div>
 
-        <form onSubmit={onSubmit} className="mt-6 space-y-6">
+        {(kind === "text" || kind === "photo") ? (user && <PostComposer key={kind} kind={kind} userId={user.id} onPublished={() => navigate({ to: "/" })} />) : <form onSubmit={onSubmit} className="mt-6 space-y-6">
           {/* Kind picker: long video vs reel */}
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-2">
               {t("chooseType")} <span className="text-primary">*</span>
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="hidden">
               {(["video", "reel"] as const).map((k) => (
                 <button
                   type="button"
@@ -447,7 +463,7 @@ function UploadPage() {
             {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
             {submitting ? `${progress}%` : t("publish")}
           </button>
-        </form>
+        </form>}
       </section>
     </AppLayout>
   );
