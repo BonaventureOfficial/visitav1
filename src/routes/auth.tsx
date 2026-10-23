@@ -8,7 +8,14 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "Sign in — Visita" }] }),
+  head: () => ({ meta: [
+    { title: "Sign in — Visita" },
+    { name: "description", content: "Sign in or create your Visita creator account." },
+    { property: "og:title", content: "Sign in — Visita" },
+    { property: "og:description", content: "Sign in or create your Visita creator account." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: AuthPage,
 });
 

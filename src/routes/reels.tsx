@@ -36,6 +36,10 @@ export const Route = createFileRoute("/reels")({
     meta: [
       { title: "Reels — Visita" },
       { name: "description", content: "Short vertical clips on Visita." },
+      { property: "og:title", content: "Reels — Visita" },
+      { property: "og:description", content: "Short vertical clips on Visita." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ReelsPage,
