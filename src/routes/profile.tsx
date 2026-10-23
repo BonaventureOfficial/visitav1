@@ -525,7 +525,7 @@ function ProfilePage() {
         )}
 
 
-        {user && <PostsList ownerId={user.id} />}
+        {user && <PostsList ownerId={user.id} canManage />}
         <div className="mt-8 mb-3 flex items-center gap-2">
           <h2 className="font-display text-lg font-bold flex items-center gap-2">
             <HistoryIcon className="h-4 w-4 text-primary" /> Historique

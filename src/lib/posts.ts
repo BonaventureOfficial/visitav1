@@ -19,7 +19,7 @@ export async function fetchPosts(ownerId?: string, cursor?: PostCursor | null) {
     paths.length ? supabase.storage.from("post-photos").createSignedUrls(paths, 3600) : Promise.resolve({ data: [] }),
   ]);
   const urls = new Map((signed.data ?? []).map((s) => [s.path, s.signedUrl]));
-  return rows.map((p): Publication => ({ ...p, channel_name: meta.get(p.user_id)?.channel_name ?? "Visita", avatar_url: meta.get(p.user_id)?.avatar_url, photo_url: p.photo_path ? urls.get(p.photo_path) : undefined }));
+  return rows.map((p): Publication => ({ ...p, channel_name: meta.get(p.user_id)?.channel_name ?? "Visita", avatar_url: meta.get(p.user_id)?.avatar_url, photo_url: p.photo_path ? urls.get(p.photo_path) ?? undefined : undefined }));
 }
 
 export async function publishPost(userId: string, kind: PostKind, body: string, file: File | null) {

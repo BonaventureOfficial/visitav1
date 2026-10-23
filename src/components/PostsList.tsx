@@ -8,7 +8,7 @@ import { useI18n } from "@/lib/i18n";
 import { timeAgo } from "@/lib/format";
 import { toast } from "sonner";
 
-export function PostsList({ ownerId }: { ownerId?: string }) {
+export function PostsList({ ownerId, canManage = false }: { ownerId?: string; canManage?: boolean }) {
   const { lang } = useI18n();
   const fr = lang === "fr";
   const [rows, setRows] = useState<Publication[]>([]);
@@ -51,7 +51,7 @@ export function PostsList({ ownerId }: { ownerId?: string }) {
             {p.avatar_url && <img src={p.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />}
             <span className="min-w-0"><span className="block truncate text-sm font-semibold">{p.channel_name}</span><time className="block text-xs text-muted-foreground" dateTime={p.created_at}>{timeAgo(p.created_at)}</time></span>
           </Link>
-          {ownerId && <Button variant="ghost" size="icon" aria-label={fr ? "Supprimer la publication" : "Delete post"} onClick={() => { setSelected(p); setConfirmation(""); }}><Trash2 className="text-destructive" /></Button>}
+          {canManage && ownerId && <Button variant="ghost" size="icon" aria-label={fr ? "Supprimer la publication" : "Delete post"} onClick={() => { setSelected(p); setConfirmation(""); }}><Trash2 className="text-destructive" /></Button>}
         </div>
         {p.photo_url && <img src={p.photo_url} alt={p.body || (fr ? "Photo publiée" : "Published photo")} loading="lazy" decoding="async" className="w-full max-h-96 object-contain bg-secondary" />}
         {p.body && <p className="p-4 whitespace-pre-wrap break-words text-sm leading-relaxed">{p.body}</p>}
@@ -66,7 +66,7 @@ export function PostsList({ ownerId }: { ownerId?: string }) {
         <label htmlFor="post-confirm" className="block text-sm">{fr ? "Saisissez CONFIRMER" : "Type CONFIRMER"}</label>
         <input id="post-confirm" value={confirmation} onChange={(e) => setConfirmation(e.target.value)} className="w-full rounded-md border border-border bg-input p-3" />
         <Button variant="destructive" className="w-full" disabled={confirmation !== "CONFIRMER" || deleting} onClick={async () => {
-          if (confirmation !== "CONFIRMER" || !ownerId) return;
+          if (confirmation !== "CONFIRMER" || !ownerId || !canManage) return;
           setDeleting(true);
           try {
             const { error: err } = await supabase.from("posts").delete().eq("id", selected.id).eq("user_id", ownerId);
