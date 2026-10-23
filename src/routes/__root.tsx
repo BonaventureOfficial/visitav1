@@ -16,6 +16,7 @@ import { LanguageProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { PlayerProvider } from "@/lib/player";
 import { Toaster } from "sonner";
+import { AppearanceProvider, useAppearance } from "@/lib/appearance";
 
 function NotFoundComponent() {
   return (
@@ -91,8 +92,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Visita — Shows, Podcasts & Documentaries" },
       { name: "twitter:description", content: "Stream the best shows, podcasts and documentaries on Visita." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Rry5JbD6Q6VlTNZgJ2rv3Cb7eyX2/social-images/social-1781314734044-file_00000000612871fd8e767efe0248ab36.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/Rry5JbD6Q6VlTNZgJ2rv3Cb7eyX2/social-images/social-1781314734044-file_00000000612871fd8e767efe0248ab36.webp" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
@@ -133,14 +132,19 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
+      <AppearanceProvider><LanguageProvider>
         <AuthProvider>
           <PlayerProvider>
             <Outlet />
-            <Toaster theme="dark" position="top-center" />
+            <AppearanceToaster />
           </PlayerProvider>
         </AuthProvider>
-      </LanguageProvider>
+      </LanguageProvider></AppearanceProvider>
     </QueryClientProvider>
   );
+}
+
+function AppearanceToaster() {
+  const { appearance } = useAppearance();
+  return <Toaster theme={appearance === "night" ? "dark" : "light"} position="top-center" />;
 }

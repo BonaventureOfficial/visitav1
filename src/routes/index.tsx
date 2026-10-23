@@ -18,6 +18,7 @@ import { track, trackImpression } from "@/lib/track";
 import { formatCount, timeAgo } from "@/lib/format";
 import { usePlayer, useVideoHost } from "@/lib/player";
 import { toast } from "sonner";
+import { PostsList } from "@/components/PostsList";
 
 
 interface VideoRow {
@@ -233,6 +234,7 @@ function Home() {
           </>
         )}
 
+        {filter === "all" && <PostsList ownerId={channel} />}
         <div className="h-4" />
       </section>
 

@@ -13,6 +13,7 @@ import { VerifiedBadge, useVerification } from "@/components/VerifiedBadge";
 import { amIAdmin } from "@/lib/ranking.functions";
 import { ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { PostsList } from "@/components/PostsList";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -524,6 +525,7 @@ function ProfilePage() {
         )}
 
 
+        {user && <PostsList ownerId={user.id} canManage />}
         <div className="mt-8 mb-3 flex items-center gap-2">
           <h2 className="font-display text-lg font-bold flex items-center gap-2">
             <HistoryIcon className="h-4 w-4 text-primary" /> Historique
