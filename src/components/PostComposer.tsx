@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { publishPost, PHOTO_TYPES, type PostKind } from "@/lib/posts";
 import { toast } from "sonner";
+import { GazetteEditor } from "@/components/GazetteEditor";
+import { PAPER_THEMES, type GazetteNode, type PaperTheme } from "@/lib/gazette";
 
 export function PostComposer({ kind, userId, onPublished }: { kind: PostKind; userId: string; onPublished: () => void }) {
   const { lang } = useI18n();
@@ -12,6 +14,8 @@ export function PostComposer({ kind, userId, onPublished }: { kind: PostKind; us
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
   const [busy, setBusy] = useState(false);
+  const [document, setDocument] = useState<GazetteNode | null>(null);
+  const [theme, setTheme] = useState<PaperTheme>("paper");
   useEffect(() => {
     if (!file) { setPreview(""); return; }
     const url = URL.createObjectURL(file);
@@ -23,7 +27,7 @@ export function PostComposer({ kind, userId, onPublished }: { kind: PostKind; us
     if (busy) return;
     setBusy(true);
     try {
-      await publishPost(userId, kind, body, file);
+      await publishPost(userId, kind, body, file, document, theme);
       toast.success(fr ? "Publication réussie" : "Published");
       onPublished();
     } catch (error) { toast.error(error instanceof Error ? error.message : fr ? "Publication impossible" : "Could not publish"); }
@@ -42,10 +46,11 @@ export function PostComposer({ kind, userId, onPublished }: { kind: PostKind; us
       </label>
       {file && <p className="mt-2 truncate text-xs text-muted-foreground">{file.name}</p>}
     </div>}
-    <div>
+    {kind === "text" ? <GazetteEditor userId={userId} disabled={busy} theme={theme} onTheme={setTheme} onChange={(text, doc) => { setBody(text); setDocument(doc); }} /> : <div>
       <label htmlFor="post-body" className="block text-sm font-medium mb-2">{kind === "text" ? (fr ? "Texte" : "Text") : (fr ? "Légende" : "Caption")} {kind === "text" && <span className="text-primary">*</span>}</label>
       <textarea id="post-body" value={body} onChange={(e) => setBody(e.target.value)} required={kind === "text"} disabled={busy} maxLength={5000} rows={kind === "text" ? 8 : 3} className="w-full rounded-lg bg-input border border-border p-4 text-sm outline-none focus:border-primary" />
-    </div>
-    <Button type="submit" className="w-full h-11" disabled={busy || (kind === "text" ? !body.trim() : !file)}>{busy ? <Loader2 className="animate-spin" /> : <Send />}{fr ? (kind === "text" ? "Publier un texte" : "Publier une photo") : (kind === "text" ? "Publish text" : "Publish photo")}</Button>
+    </div>}
+    {kind === "photo" && <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">{fr ? "Fond" : "Paper"}</span>{PAPER_THEMES.map(paper => <Button type="button" key={paper} aria-label={`Fond ${paper}`} aria-pressed={theme === paper} variant="ghost" size="icon" disabled={busy} onClick={() => setTheme(paper)}><span data-paper={paper} className={`gazette-swatch h-6 w-6 rounded-full border-2 ${theme === paper ? "ring-2 ring-primary" : ""}`} /></Button>)}</div>}
+    <Button type="submit" className="w-full h-11" disabled={busy || body.length > 5000 || (kind === "text" ? !body.trim() : !file)}>{busy ? <Loader2 className="animate-spin" /> : <Send />}{fr ? (kind === "text" ? "Publier la gazette" : "Publier une photo") : (kind === "text" ? "Publish gazette" : "Publish photo")}</Button>
   </form>;
 }

@@ -18,7 +18,9 @@ import { track, trackImpression } from "@/lib/track";
 import { formatCount, timeAgo } from "@/lib/format";
 import { usePlayer, useVideoHost } from "@/lib/player";
 import { toast } from "sonner";
-import { PostsList } from "@/components/PostsList";
+import { GazetteCard } from "@/components/GazetteCard";
+import { usePublications } from "@/hooks/use-publications";
+import { Button } from "@/components/ui/button";
 
 
 interface VideoRow {
@@ -45,10 +47,10 @@ export const Route = createFileRoute("/")({
 
   head: () => ({
     meta: [
-      { title: "Visita — Shows, Podcasts & Documentaries" },
-      { name: "description", content: "Stream the best shows, podcasts and documentaries on Visita." },
-      { property: "og:title", content: "Visita — Shows, Podcasts & Documentaries" },
-      { property: "og:description", content: "Stream the best shows, podcasts and documentaries on Visita." },
+      { title: "Visita — Vidéos & Gazettes" },
+      { name: "description", content: "Découvrez les vidéos, actualités et gazettes des créateurs sur Visita." },
+      { property: "og:title", content: "Visita — Vidéos & Gazettes" },
+      { property: "og:description", content: "Découvrez les vidéos, actualités et gazettes des créateurs sur Visita." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -60,6 +62,7 @@ const PAGE_SIZE = 12;
 
 function Home() {
   const { channel } = Route.useSearch();
+  const publications = usePublications(channel);
 
   const { user } = useAuth();
   const [filter, setFilter] = useState<string>("all");
@@ -213,15 +216,16 @@ function Home() {
         ) : (
           <>
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {list.map((v) => (
+              {list.flatMap((v, index) => [
                 <VideoCard
                   key={v.id}
                   v={v}
                   initialLiked={likedIds.has(v.id)}
                   meta={v.user_id ? meta.get(v.user_id) ?? null : null}
                   onAvatarClick={openAvatar}
-                />
-              ))}
+                />,
+                ...(filter === "all" && (index + 1) % 4 === 0 && publications.rows[Math.floor(index / 4)] ? [<div key={`gazette-${publications.rows[Math.floor(index / 4)].id}`} className="col-span-full sm:col-span-2 lg:col-span-3 xl:col-span-4"><GazetteCard post={publications.rows[Math.floor(index / 4)]} /></div>] : []),
+              ])}
             </div>
             <div ref={sentinelRef} className="h-10" />
             {loadingMore && (
@@ -234,7 +238,10 @@ function Home() {
           </>
         )}
 
-        {filter === "all" && <PostsList ownerId={channel} />}
+        {filter === "all" && <>
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-5">{publications.rows.slice(Math.floor(list.length / 4)).map(post => <GazetteCard key={post.id} post={post} />)}</div>
+          {(publications.more || publications.error) && <Button variant="secondary" className="mt-4" disabled={publications.busy} onClick={publications.load}>{publications.error ? "Réessayer" : "Plus de gazettes"}</Button>}
+        </>}
         <div className="h-4" />
       </section>
 
