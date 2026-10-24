@@ -1,3 +1,4 @@
+/// <reference types="bun" />
 import { describe, expect, test } from "bun:test";
 import { cleanGazette, gazettePaths } from "./gazette";
 describe("gazette document safety", () => {
