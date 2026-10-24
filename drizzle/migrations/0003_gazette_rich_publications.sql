@@ -1,0 +1,3 @@
+ALTER TABLE public.posts ADD COLUMN rich_content jsonb, ADD COLUMN paper_theme text NOT NULL DEFAULT 'paper';
+ALTER TABLE public.posts ADD CONSTRAINT posts_paper_theme_valid CHECK (paper_theme IN ('paper','night','mint','rose'));
+ALTER TABLE public.posts ADD CONSTRAINT posts_rich_content_valid CHECK (rich_content IS NULL OR (jsonb_typeof(rich_content) = 'object' AND rich_content->>'type' = 'doc' AND octet_length(rich_content::text) <= 65536));

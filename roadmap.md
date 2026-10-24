@@ -1,4 +1,7 @@
 # Tasks
+- [x] Add a rich gazette editor with colors, typography, tables and uploaded images.
+- [x] Display text/photo gazette panels between Home videos, preserving pagination and deletion confirmation.
+- [x] Test gazette formatting, tables, safe rendering and mobile editor display; authenticated persistence remains below.
 - [x] Fix mobile header and add persistent Day/Night appearance with total-black night.
 - [x] Add separate persisted text and photo publishing and display published posts.
 - [x] Verify mobile layout, appearance persistence, and signed-out publication protection.

@@ -133,7 +133,9 @@ export type Database = {
           created_at: string
           id: string
           kind: string
+          paper_theme: string
           photo_path: string | null
+          rich_content: Json | null
           user_id: string
         }
         Insert: {
@@ -141,7 +143,9 @@ export type Database = {
           created_at?: string
           id?: string
           kind: string
+          paper_theme?: string
           photo_path?: string | null
+          rich_content?: Json | null
           user_id: string
         }
         Update: {
@@ -149,7 +153,9 @@ export type Database = {
           created_at?: string
           id?: string
           kind?: string
+          paper_theme?: string
           photo_path?: string | null
+          rich_content?: Json | null
           user_id?: string
         }
         Relationships: [

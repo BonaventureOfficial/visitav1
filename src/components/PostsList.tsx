@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { timeAgo } from "@/lib/format";
 import { toast } from "sonner";
+import { GazetteCard } from "@/components/GazetteCard";
+import { gazettePaths } from "@/lib/gazette";
 
 export function PostsList({ ownerId, canManage = false }: { ownerId?: string; canManage?: boolean }) {
   const { lang } = useI18n();
@@ -45,17 +47,7 @@ export function PostsList({ ownerId, canManage = false }: { ownerId?: string; ca
   return <section className="mt-8" aria-label={fr ? "Publications" : "Posts"}>
     <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold"><FileText className="h-4 w-4 text-primary" />{fr ? "Publications" : "Posts"}</h2>
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {rows.map((p) => <article key={p.id} className="min-w-0 rounded-lg border border-border bg-card overflow-hidden">
-        <div className="flex items-center gap-2 p-3">
-          <Link to="/" search={{ channel: p.user_id }} className="flex min-w-0 flex-1 items-center gap-2">
-            {p.avatar_url && <img src={p.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />}
-            <span className="min-w-0"><span className="block truncate text-sm font-semibold">{p.channel_name}</span><time className="block text-xs text-muted-foreground" dateTime={p.created_at}>{timeAgo(p.created_at)}</time></span>
-          </Link>
-          {canManage && ownerId && <Button variant="ghost" size="icon" aria-label={fr ? "Supprimer la publication" : "Delete post"} onClick={() => { setSelected(p); setConfirmation(""); }}><Trash2 className="text-destructive" /></Button>}
-        </div>
-        {p.photo_url && <img src={p.photo_url} alt={p.body || (fr ? "Photo publiée" : "Published photo")} loading="lazy" decoding="async" className="w-full max-h-96 object-contain bg-secondary" />}
-        {p.body && <p className="p-4 whitespace-pre-wrap break-words text-sm leading-relaxed">{p.body}</p>}
-      </article>)}
+      {rows.map((p) => <GazetteCard key={p.id} post={p} action={canManage && ownerId && <Button variant="ghost" size="icon" aria-label={fr ? "Supprimer la publication" : "Delete post"} onClick={() => { setSelected(p); setConfirmation(""); }}><Trash2 className="text-destructive" /></Button>} />)}
     </div>
     {!busy && !error && !rows.length && <p className="text-sm text-muted-foreground">{fr ? "Aucune publication pour l’instant." : "No posts yet."}</p>}
     {busy && <Loader2 className="mx-auto my-4 h-5 w-5 animate-spin text-primary" />}
@@ -71,7 +63,8 @@ export function PostsList({ ownerId, canManage = false }: { ownerId?: string; ca
           try {
             const { error: err } = await supabase.from("posts").delete().eq("id", selected.id).eq("user_id", ownerId);
             if (err) throw err;
-            if (selected.photo_path) await supabase.storage.from("post-photos").remove([selected.photo_path]);
+            const paths = [...(selected.photo_path ? [selected.photo_path] : []), ...gazettePaths(selected.rich_content ?? null)];
+            if (paths.length) await supabase.storage.from("post-photos").remove(paths);
             setRows((old) => old.filter((p) => p.id !== selected.id)); setSelected(null);
           } catch { toast.error(fr ? "Suppression impossible" : "Could not delete"); }
           finally { setDeleting(false); }
