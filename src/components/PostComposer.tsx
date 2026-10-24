@@ -47,8 +47,8 @@ export function PostComposer({ kind, userId, onPublished }: { kind: PostKind; us
       {file && <p className="mt-2 truncate text-xs text-muted-foreground">{file.name}</p>}
     </div>}
     {kind === "text" ? <GazetteEditor userId={userId} disabled={busy} theme={theme} onTheme={setTheme} onChange={(text, doc) => { setBody(text); setDocument(doc); }} /> : <div>
-      <label htmlFor="post-body" className="block text-sm font-medium mb-2">{kind === "text" ? (fr ? "Texte" : "Text") : (fr ? "Légende" : "Caption")} {kind === "text" && <span className="text-primary">*</span>}</label>
-      <textarea id="post-body" value={body} onChange={(e) => setBody(e.target.value)} required={kind === "text"} disabled={busy} maxLength={5000} rows={kind === "text" ? 8 : 3} className="w-full rounded-lg bg-input border border-border p-4 text-sm outline-none focus:border-primary" />
+      <label htmlFor="post-body" className="block text-sm font-medium mb-2">{fr ? "Légende" : "Caption"}</label>
+      <textarea id="post-body" value={body} onChange={(e) => setBody(e.target.value)} disabled={busy} maxLength={5000} rows={3} className="w-full rounded-lg bg-input border border-border p-4 text-sm outline-none focus:border-primary" />
     </div>}
     {kind === "photo" && <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">{fr ? "Fond" : "Paper"}</span>{PAPER_THEMES.map(paper => <Button type="button" key={paper} aria-label={`Fond ${paper}`} aria-pressed={theme === paper} variant="ghost" size="icon" disabled={busy} onClick={() => setTheme(paper)}><span data-paper={paper} className={`gazette-swatch h-6 w-6 rounded-full border-2 ${theme === paper ? "ring-2 ring-primary" : ""}`} /></Button>)}</div>}
     <Button type="submit" className="w-full h-11" disabled={busy || body.length > 5000 || (kind === "text" ? !body.trim() : !file)}>{busy ? <Loader2 className="animate-spin" /> : <Send />}{fr ? (kind === "text" ? "Publier la gazette" : "Publier une photo") : (kind === "text" ? "Publish gazette" : "Publish photo")}</Button>

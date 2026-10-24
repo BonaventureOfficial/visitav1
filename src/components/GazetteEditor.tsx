@@ -1,6 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
-import { Extension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { TextStyle, Color, FontFamily } from "@tiptap/extension-text-style";
 import TextAlign from "@tiptap/extension-text-align";
@@ -15,7 +14,6 @@ import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
 
 const StoredImage = Image.extend({ addAttributes() { return { ...this.parent?.(), storagePath: { default: null } }; } });
-const Limit = Extension.create({ name: "gazetteLimit", addProseMirrorPlugins() { return []; } });
 export function GazetteEditor({ userId, disabled, theme, onTheme, onChange }: { userId: string; disabled: boolean; theme: PaperTheme; onTheme: (theme: PaperTheme) => void; onChange: (text: string, doc: GazetteNode | null) => void }) {
   const { lang } = useI18n(); const fr = lang === "fr";
   const [uploading, setUploading] = useState(false);
@@ -26,13 +24,14 @@ export function GazetteEditor({ userId, disabled, theme, onTheme, onChange }: { 
   const fileInput = useRef<HTMLInputElement>(null);
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false }), TextStyle, Color, FontFamily, TextAlign.configure({ types: ["heading", "paragraph"] }), TableKit.configure({ table: { resizable: false } }), StoredImage, Limit],
+    extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false }), TextStyle, Color, FontFamily, TextAlign.configure({ types: ["heading", "paragraph"] }), TableKit.configure({ table: { resizable: false } }), StoredImage],
     content: { type: "doc", content: [{ type: "paragraph" }] },
     editable: !disabled,
     editorProps: { attributes: { "aria-label": fr ? "Corps de la gazette" : "Gazette body", role: "textbox", "aria-multiline": "true", class: "gazette-prose min-h-80 outline-none" } },
     onUpdate: ({ editor: e }) => onChange(e.getText(), cleanGazette(e.getJSON())),
   });
   const state = useEditorState({ editor, selector: ({ editor: e }) => ({ bold: e?.isActive("bold"), italic: e?.isActive("italic"), underline: e?.isActive("underline"), table: e?.isActive("table"), font: e?.getAttributes("textStyle").fontFamily ?? "Georgia", count: e?.getText().length ?? 0 }) });
+  useEffect(() => { editor?.setEditable(!disabled && !preview); }, [editor, disabled, preview]);
   const tool = (label: string, icon: React.ReactNode, command: () => void, active = false) => <Button type="button" key={label} title={label} aria-label={label} aria-pressed={active} variant={active ? "secondary" : "ghost"} size="icon" disabled={disabled || !editor || uploading} onMouseDown={e => e.preventDefault()} onClick={command}>{icon}</Button>;
   return <div className="space-y-3">
     <div className="gazette-toolbar flex flex-wrap items-center gap-1 border-y border-border py-2" role="toolbar" aria-label={fr ? "Mise en forme" : "Formatting"}>
