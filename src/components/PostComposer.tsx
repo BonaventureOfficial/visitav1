@@ -5,7 +5,7 @@ import { useI18n } from "@/lib/i18n";
 import { publishPost, PHOTO_TYPES, type PostKind } from "@/lib/posts";
 import { toast } from "sonner";
 import { GazetteEditor } from "@/components/GazetteEditor";
-import { PAPER_THEMES, type GazetteNode, type PaperTheme } from "@/lib/gazette";
+import { PAPER_THEMES, gazetteTitle, type GazetteNode, type PaperTheme } from "@/lib/gazette";
 
 export function PostComposer({ kind, userId, onPublished }: { kind: PostKind; userId: string; onPublished: () => void }) {
   const { lang } = useI18n();
@@ -51,6 +51,6 @@ export function PostComposer({ kind, userId, onPublished }: { kind: PostKind; us
       <textarea id="post-body" value={body} onChange={(e) => setBody(e.target.value)} disabled={busy} maxLength={5000} rows={3} className="w-full rounded-lg bg-input border border-border p-4 text-sm outline-none focus:border-primary" />
     </div>}
     {kind === "photo" && <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">{fr ? "Fond" : "Paper"}</span>{PAPER_THEMES.map(paper => <Button type="button" key={paper} aria-label={`Fond ${paper}`} aria-pressed={theme === paper} variant="ghost" size="icon" disabled={busy} onClick={() => setTheme(paper)}><span data-paper={paper} className={`gazette-swatch h-6 w-6 rounded-full border-2 ${theme === paper ? "ring-2 ring-primary" : ""}`} /></Button>)}</div>}
-    <Button type="submit" className="w-full h-11" disabled={busy || body.length > 5000 || (kind === "text" ? !body.trim() : !file)}>{busy ? <Loader2 className="animate-spin" /> : <Send />}{fr ? (kind === "text" ? "Publier la gazette" : "Publier une photo") : (kind === "text" ? "Publish gazette" : "Publish photo")}</Button>
+    <Button type="submit" className="w-full h-11" disabled={busy || body.length > 5000 || (kind === "text" ? !body.trim() || !gazetteTitle(document) : !file)}>{busy ? <Loader2 className="animate-spin" /> : <Send />}{fr ? (kind === "text" ? "Publier la gazette" : "Publier une photo") : (kind === "text" ? "Publish gazette" : "Publish photo")}</Button>
   </form>;
 }

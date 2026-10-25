@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { fetchCreatorMeta } from "@/lib/feed";
-import { cleanGazette, gazettePaths, type GazetteNode, type PaperTheme } from "@/lib/gazette";
+import { cleanGazette, gazettePaths, gazetteTitle, type GazetteNode, type PaperTheme } from "@/lib/gazette";
 
 export type PostKind = "text" | "photo";
 export type PostCursor = { created_at: string; id: string };
@@ -46,6 +46,7 @@ export async function publishPost(userId: string, kind: PostKind, body: string, 
     if (error) throw error;
   }
   const rich = kind === "text" ? cleanGazette(document) : null;
+  if (kind === "text" && !gazetteTitle(rich)) throw new Error("Ajouter Titre");
   if (rich && (JSON.stringify(rich).length > 60000 || gazettePaths(rich).some(p => !p.startsWith(`${userId}/`)))) throw new Error("Gazette trop volumineuse ou photo invalide");
   const { data, error } = await supabase.from("posts").insert({ user_id: userId, kind, body: text, photo_path: path, rich_content: rich as never, paper_theme: paperTheme }).select("id").single();
   if (error) {
