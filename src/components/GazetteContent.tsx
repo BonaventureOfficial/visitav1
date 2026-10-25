@@ -1,5 +1,6 @@
 import { createElement, type ReactNode, type CSSProperties } from "react";
-import { cleanGazette, type GazetteNode } from "@/lib/gazette";
+import { cleanGazette, imageLayout, type GazetteNode } from "@/lib/gazette";
+import { GazetteImage } from "@/components/GazetteImage";
 
 export function GazetteContent({ document, images = {} }: { document: unknown; images?: Record<string, string> }) {
   const doc = cleanGazette(document);
@@ -15,7 +16,8 @@ export function GazetteContent({ document, images = {} }: { document: unknown; i
     }
     if (n.type === "image") {
       const url = images[String(n.attrs?.storagePath)];
-      return url ? <img key={key} src={url} alt={String(n.attrs?.alt ?? "")} loading="lazy" decoding="async" /> : null;
+      const layout = imageLayout(n.attrs);
+      return url ? <figure key={key} className="gazette-image" style={{ width: `${layout.width}%`, marginLeft: `${(100 - layout.width) * layout.offset / 100}%` }}><GazetteImage src={url} alt={String(n.attrs?.alt ?? "")} attrs={n.attrs} /></figure> : null;
     }
     const tag = ({ paragraph: "p", heading: `h${n.attrs?.level ?? 2}`, bulletList: "ul", orderedList: "ol", listItem: "li", blockquote: "blockquote", horizontalRule: "hr", hardBreak: "br", table: "table", tableRow: "tr", tableHeader: "th", tableCell: "td" } as Record<string, string>)[n.type] ?? "div";
     const children = n.content?.map(render);

@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowDownRight, ArrowUpRight, Newspaper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GazetteContent } from "@/components/GazetteContent";
+import { gazetteTitle } from "@/lib/gazette";
 import type { Publication } from "@/lib/posts";
 import { useI18n } from "@/lib/i18n";
 
@@ -12,7 +13,7 @@ export function GazetteCard({ post, action }: { post: Publication; action?: Reac
   const fr = lang === "fr";
   return <article className="gazette-panel" data-paper={post.paper_theme ?? "paper"}>
     <header className="gazette-masthead flex items-center justify-between gap-3">
-      <span className="flex items-center gap-2"><Newspaper className="h-4 w-4" /><span>VISITA <span className="font-normal italic">Gazette</span></span></span>
+      <span className="flex items-center gap-2"><Newspaper className="h-4 w-4" /><span className="min-w-0 break-words">{gazetteTitle(post.rich_content) || (post.kind === "photo" ? (fr ? "En images" : "In pictures") : (fr ? "Sans titre" : "Untitled"))}</span></span>
       <span className="text-[10px] font-sans uppercase">{post.kind === "photo" ? (fr ? "En images" : "In pictures") : (fr ? "Journal" : "Journal")}</span>
     </header>
     <div className="flex items-center justify-between gap-3 border-b border-current/20 py-2 text-xs">

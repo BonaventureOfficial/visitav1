@@ -4,7 +4,7 @@ import StarterKit from "@tiptap/starter-kit";
 import { TextStyle, Color, FontFamily } from "@tiptap/extension-text-style";
 import TextAlign from "@tiptap/extension-text-align";
 import { TableKit } from "@tiptap/extension-table";
-import Image from "@tiptap/extension-image";
+import { StoredImage } from "@/components/GazetteImageNode";
 import { AlignLeft, AlignCenter, AlignRight, Bold, Italic, Underline, Undo2, Redo2, ImagePlus, Table2, List, ListOrdered, Quote, Plus, Minus, Trash2, Loader2, Eye, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GAZETTE_FONTS, INK_COLORS, PAPER_THEMES, cleanGazette, type GazetteNode, type PaperTheme } from "@/lib/gazette";
@@ -13,22 +13,23 @@ import { GazetteContent } from "@/components/GazetteContent";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
 
-const StoredImage = Image.extend({ addAttributes() { return { ...this.parent?.(), storagePath: { default: null } }; } });
 export function GazetteEditor({ userId, disabled, theme, onTheme, onChange }: { userId: string; disabled: boolean; theme: PaperTheme; onTheme: (theme: PaperTheme) => void; onChange: (text: string, doc: GazetteNode | null) => void }) {
   const { lang } = useI18n(); const fr = lang === "fr";
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [title, setTitle] = useState("");
+  const titleRef = useRef("");
   const [images, setImages] = useState<Record<string, string>>({});
   const [tableOpen, setTableOpen] = useState(false);
   const [rows, setRows] = useState(3); const [columns, setColumns] = useState(3);
   const fileInput = useRef<HTMLInputElement>(null);
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false }), TextStyle, Color, FontFamily, TextAlign.configure({ types: ["heading", "paragraph"] }), TableKit.configure({ table: { resizable: false } }), StoredImage],
+    extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false }), TextStyle, Color, FontFamily, TextAlign.configure({ types: ["heading", "paragraph"] }), TableKit.configure({ table: { resizable: false } }), StoredImage.configure({ userId, onUploaded: image => setImages(old => ({ ...old, [image.path]: image.url })) })],
     content: { type: "doc", content: [{ type: "paragraph" }] },
     editable: !disabled,
     editorProps: { attributes: { "aria-label": fr ? "Corps de la gazette" : "Gazette body", role: "textbox", "aria-multiline": "true", class: "gazette-prose min-h-80 outline-none" } },
-    onUpdate: ({ editor: e }) => onChange(e.getText(), cleanGazette(e.getJSON())),
+    onUpdate: ({ editor: e }) => onChange(e.getText(), cleanGazette({ ...e.getJSON(), attrs: { title: titleRef.current } })),
   });
   const state = useEditorState({ editor, selector: ({ editor: e }) => ({ bold: e?.isActive("bold"), italic: e?.isActive("italic"), underline: e?.isActive("underline"), table: e?.isActive("table"), font: e?.getAttributes("textStyle").fontFamily ?? "Georgia", count: e?.getText().length ?? 0 }) });
   useEffect(() => { editor?.setEditable(!disabled && !preview); }, [editor, disabled, preview]);
@@ -67,7 +68,7 @@ export function GazetteEditor({ userId, disabled, theme, onTheme, onChange }: { 
       <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">{fr ? "Fond" : "Paper"}</span>{PAPER_THEMES.map((paper, i) => <Button key={paper} type="button" size="icon" variant="ghost" disabled={disabled} className="h-7 w-7 p-0" aria-label={`${fr ? "Fond" : "Paper"} ${["blanc", "nuit", "menthe", "rose"][i]}`} title={paper} aria-pressed={theme === paper} onClick={() => onTheme(paper)}><span data-paper={paper} className={`gazette-swatch h-5 w-5 rounded-full border-2 ${theme === paper ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`} /></Button>)}</div>
       <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">{fr ? "Encre" : "Ink"}</span>{INK_COLORS.map((color, i) => <Button key={color} type="button" size="icon" variant="ghost" disabled={disabled || !editor} className="h-7 w-7 p-0" aria-label={`${fr ? "Encre" : "Ink"} ${["noire", "rouge", "verte", "bleue", "or"][i]}`} title={color} onMouseDown={e => e.preventDefault()} onClick={() => editor?.chain().focus().setColor(color).run()}><span className={`gazette-ink-swatch ink-${i} h-5 w-5 rounded-full`} /></Button>)}</div>
     </div>
-    <div className="gazette-panel" data-paper={theme}><div className="gazette-masthead mb-4 border-b-2 border-current pb-3">VISITA <span className="font-normal italic">Gazette</span></div>{preview ? <GazetteContent document={editor?.getJSON()} images={images} /> : <EditorContent editor={editor} />}</div>
+    <div className="gazette-panel" data-paper={theme}><input aria-label={fr ? "Ajouter Titre" : "Add title"} placeholder={fr ? "Ajouter Titre" : "Add title"} required maxLength={200} disabled={disabled || preview} value={title} className="gazette-title-input gazette-masthead mb-4 w-full border-b-2 border-current bg-transparent pb-3 outline-none" onChange={e => { setTitle(e.target.value); titleRef.current = e.target.value; if (editor) onChange(editor.getText(), cleanGazette({ ...editor.getJSON(), attrs: { title: e.target.value } })); }} />{preview ? <GazetteContent document={editor?.getJSON()} images={images} /> : <EditorContent editor={editor} />}</div>
     <div className="text-right text-xs text-muted-foreground" aria-live="polite">{state?.count ?? 0} / 5 000</div>
     <input ref={fileInput} type="file" className="sr-only" aria-label={fr ? "Photo dans la gazette" : "Gazette photo"} accept={PHOTO_TYPES.join(",")} disabled={disabled || uploading} onChange={async e => {
       const file = e.target.files?.[0]; e.target.value = ""; if (!file || !editor) return;

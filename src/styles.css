@@ -167,3 +167,13 @@
 .gazette-prose .selectedCell { outline: 2px solid var(--primary); }
 .gazette-prose hr { border-top: 2px solid currentColor; margin: 1em 0; }
 @media (max-width: 640px) { .gazette-panel { padding: 16px; } .gazette-masthead { font-size: 22px; } .gazette-prose h1 { font-size: 28px; } }
+
+/* Stored geometry is shared by the editor and publication renderer. */
+.gazette-image { position: relative; margin-top: 1em; margin-bottom: 1em; max-width: 100%; }
+.gazette-image-frame { position: relative; width: 100%; }
+.gazette-prose .gazette-image-frame img { position: absolute; left: 50%; top: 50%; height: auto; max-height: none; max-width: none; margin: 0; }
+.gazette-image-touch { touch-action: none; user-select: none; cursor: grab; }
+.gazette-image-selected { outline: 2px solid var(--primary); outline-offset: 3px; }
+.gazette-image-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 8px 0; color: var(--foreground); }
+.gazette-title-input { color: var(--gazette-ink); border-radius: 0; }
+.gazette-title-input::placeholder { color: var(--gazette-ink); opacity: 0.6; }
