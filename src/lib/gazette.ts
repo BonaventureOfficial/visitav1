@@ -7,6 +7,13 @@ export function imageLayout(attrs?: Record<string, unknown>) {
   const bounded = (value: unknown, fallback: number, min: number, max: number) => typeof value === "number" && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
   return { width: bounded(attrs?.width, 100, 15, 100), offset: bounded(attrs?.offset, 0, 0, 100), rotation: bounded(attrs?.rotation, 0, -180, 180) };
 }
+export const tableLayout = imageLayout;
+/** Keep the input draft editable (including empty) and validate only at insertion. */
+export function tableDimensions(rows: string, columns: string): { rows: number; cols: number } | null {
+  if (!/^\d+$/.test(rows) || !/^\d+$/.test(columns)) return null;
+  const r = Number(rows), c = Number(columns);
+  return r >= 1 && r <= 10 && c >= 1 && c <= 6 ? { rows: r, cols: c } : null;
+}
 export function gazetteTitle(value: unknown): string {
   const title = cleanGazette(value)?.attrs?.title;
   return typeof title === "string" ? title : "";
@@ -28,6 +35,13 @@ export function cleanGazette(value: unknown): GazetteNode | null {
       Object.assign(attrs, imageLayout(n.attrs));
     }
     if (n.type === "heading") attrs.level = [1, 2, 3].includes(Number(n.attrs?.level)) ? Number(n.attrs?.level) : 2;
+    if (n.type === "table") Object.assign(attrs, tableLayout(n.attrs));
+    if (["tableCell", "tableHeader"].includes(n.type)) {
+      for (const key of ["colspan", "rowspan"]) {
+        const span = n.attrs?.[key];
+        if (typeof span === "number" && Number.isInteger(span) && span >= 1 && span <= 10) attrs[key] = span;
+      }
+    }
     if (["left", "center", "right", "justify"].includes(String(n.attrs?.textAlign))) attrs.textAlign = n.attrs?.textAlign;
     const marks = (Array.isArray(n.marks) ? n.marks : []).flatMap((m) => {
       if (["bold", "italic", "underline", "strike", "code"].includes(m.type)) return [{ type: m.type }];
