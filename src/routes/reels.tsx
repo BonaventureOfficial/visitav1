@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatCount } from "@/lib/format";
 import { fetchFeedPage, fetchCreatorMeta } from "@/lib/feed";
 import type { FeedCursor, CreatorMeta } from "@/lib/feed";
+import { usePlayer } from "@/lib/player";
 import { track, trackImpression } from "@/lib/track";
 import { toast } from "sonner";
 
@@ -50,6 +51,9 @@ const REEL_PAGE = 6;
 function ReelsPage() {
   const { user } = useAuth();
   const { t } = useI18n();
+  const { stop } = usePlayer();
+  // Ouvrir les Reels arrête immédiatement la vidéo lancée depuis l'Accueil.
+  useEffect(() => { stop(); }, [stop]);
   const [reels, setReels] = useState<ReelRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
