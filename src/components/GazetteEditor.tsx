@@ -5,9 +5,10 @@ import { TextStyle, Color, FontFamily } from "@tiptap/extension-text-style";
 import TextAlign from "@tiptap/extension-text-align";
 import { TableKit } from "@tiptap/extension-table";
 import { StoredImage } from "@/components/GazetteImageNode";
+import { GazetteTable } from "@/components/GazetteTableNode";
 import { AlignLeft, AlignCenter, AlignRight, Bold, Italic, Underline, Undo2, Redo2, ImagePlus, Table2, List, ListOrdered, Quote, Plus, Minus, Trash2, Loader2, Eye, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GAZETTE_FONTS, INK_COLORS, PAPER_THEMES, cleanGazette, type GazetteNode, type PaperTheme } from "@/lib/gazette";
+import { GAZETTE_FONTS, INK_COLORS, PAPER_THEMES, cleanGazette, tableDimensions, type GazetteNode, type PaperTheme } from "@/lib/gazette";
 import { uploadPostImage, PHOTO_TYPES } from "@/lib/posts";
 import { GazetteContent } from "@/components/GazetteContent";
 import { useI18n } from "@/lib/i18n";
@@ -21,11 +22,13 @@ export function GazetteEditor({ userId, disabled, theme, onTheme, onChange }: { 
   const titleRef = useRef("");
   const [images, setImages] = useState<Record<string, string>>({});
   const [tableOpen, setTableOpen] = useState(false);
-  const [rows, setRows] = useState(3); const [columns, setColumns] = useState(3);
+  const [rows, setRows] = useState("3"); const [columns, setColumns] = useState("3");
+  const dimensions = tableDimensions(rows, columns);
+  const tablePosition = useRef<number | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false }), TextStyle, Color, FontFamily, TextAlign.configure({ types: ["heading", "paragraph"] }), TableKit.configure({ table: { resizable: false } }), StoredImage.configure({ userId, onUploaded: image => setImages(old => ({ ...old, [image.path]: image.url })) })],
+    extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false }), TextStyle, Color, FontFamily, TextAlign.configure({ types: ["heading", "paragraph"] }), TableKit.configure({ table: false }), GazetteTable, StoredImage.configure({ userId, onUploaded: image => setImages(old => ({ ...old, [image.path]: image.url })) })],
     content: { type: "doc", content: [{ type: "paragraph" }] },
     editable: !disabled,
     editorProps: { attributes: { "aria-label": fr ? "Corps de la gazette" : "Gazette body", role: "textbox", "aria-multiline": "true", class: "gazette-prose min-h-80 outline-none" } },
@@ -47,16 +50,16 @@ export function GazetteEditor({ userId, disabled, theme, onTheme, onChange }: { 
       {tool(fr ? "Liste" : "Bullet list", <List />, () => { editor?.chain().focus().toggleBulletList().run(); })}
       {tool(fr ? "Liste numérotée" : "Numbered list", <ListOrdered />, () => { editor?.chain().focus().toggleOrderedList().run(); })}
       {tool(fr ? "Citation" : "Quote", <Quote />, () => { editor?.chain().focus().toggleBlockquote().run(); })}
-      {tool(fr ? "Insérer un tableau" : "Insert table", <Table2 />, () => setTableOpen(!tableOpen), state?.table)}
+      {tool(fr ? "Insérer un tableau" : "Insert table", <Table2 />, () => { tablePosition.current = editor?.state.selection.from ?? null; setTableOpen(!tableOpen); }, state?.table)}
       {tool(fr ? "Insérer une photo" : "Insert photo", uploading ? <Loader2 className="animate-spin" /> : <ImagePlus />, () => fileInput.current?.click())}
       {tool(fr ? "Annuler" : "Undo", <Undo2 />, () => { editor?.chain().focus().undo().run(); })}
       {tool(fr ? "Rétablir" : "Redo", <Redo2 />, () => { editor?.chain().focus().redo().run(); })}
       {tool(fr ? "Aperçu" : "Preview", preview ? <Pencil /> : <Eye />, () => setPreview(!preview), preview)}
     </div>
     {tableOpen && <div className="flex flex-wrap items-end gap-3 border-b border-border pb-3">
-      <label className="text-xs">{fr ? "Lignes" : "Rows"}<input aria-label={fr ? "Lignes" : "Rows"} type="number" min={1} max={10} value={rows} onChange={e => setRows(Math.min(10, Math.max(1, Number(e.target.value))))} className="ml-2 w-14 rounded border border-border bg-input p-2" /></label>
-      <label className="text-xs">{fr ? "Colonnes" : "Columns"}<input aria-label={fr ? "Colonnes" : "Columns"} type="number" min={1} max={6} value={columns} onChange={e => setColumns(Math.min(6, Math.max(1, Number(e.target.value))))} className="ml-2 w-14 rounded border border-border bg-input p-2" /></label>
-      <Button type="button" size="sm" disabled={disabled} onClick={() => { editor?.chain().focus().insertTable({ rows, cols: columns, withHeaderRow: true }).run(); setTableOpen(false); }}><Plus />{fr ? "Insérer" : "Insert"}</Button>
+      <label className="text-xs">{fr ? "Lignes" : "Rows"}<input aria-label={fr ? "Lignes" : "Rows"} type="number" inputMode="numeric" min={1} max={10} step={1} value={rows} disabled={disabled} aria-invalid={!/^\d+$/.test(rows) || Number(rows) < 1 || Number(rows) > 10} onKeyDown={e => { if (e.key === "Enter") e.preventDefault(); }} onChange={e => setRows(e.target.value)} className="ml-2 w-16 rounded border border-border bg-input p-2" /></label>
+      <label className="text-xs">{fr ? "Colonnes" : "Columns"}<input aria-label={fr ? "Colonnes" : "Columns"} type="number" inputMode="numeric" min={1} max={6} step={1} value={columns} disabled={disabled} aria-invalid={!/^\d+$/.test(columns) || Number(columns) < 1 || Number(columns) > 6} onKeyDown={e => { if (e.key === "Enter") e.preventDefault(); }} onChange={e => setColumns(e.target.value)} className="ml-2 w-16 rounded border border-border bg-input p-2" /></label>
+      <Button type="button" size="sm" disabled={disabled || !editor || !dimensions} onMouseDown={e => e.preventDefault()} onClick={() => { if (!editor || !dimensions) return; const position = tablePosition.current; const chain = editor.chain().focus(); if (position !== null) chain.setTextSelection(Math.min(position, editor.state.doc.content.size)); if (chain.insertTable({ ...dimensions, withHeaderRow: true }).run()) setTableOpen(false); }}><Plus />{fr ? "Insérer" : "Insert"}</Button>
     </div>}
     {state?.table && <div className="flex flex-wrap gap-1">
       {tool(fr ? "Ajouter une ligne" : "Add row", <Plus />, () => { editor?.chain().focus().addRowAfter().run(); })}

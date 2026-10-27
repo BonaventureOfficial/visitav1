@@ -1,6 +1,7 @@
 import { createElement, type ReactNode, type CSSProperties } from "react";
 import { cleanGazette, imageLayout, type GazetteNode } from "@/lib/gazette";
 import { GazetteImage } from "@/components/GazetteImage";
+import { GazetteTableFrame } from "@/components/GazetteTableFrame";
 
 export function GazetteContent({ document, images = {} }: { document: unknown; images?: Record<string, string> }) {
   const doc = cleanGazette(document);
@@ -21,7 +22,8 @@ export function GazetteContent({ document, images = {} }: { document: unknown; i
     }
     const tag = ({ paragraph: "p", heading: `h${n.attrs?.level ?? 2}`, bulletList: "ul", orderedList: "ol", listItem: "li", blockquote: "blockquote", horizontalRule: "hr", hardBreak: "br", table: "table", tableRow: "tr", tableHeader: "th", tableCell: "td" } as Record<string, string>)[n.type] ?? "div";
     const children = n.content?.map(render);
-    return createElement(tag, { key, style: n.attrs?.textAlign ? { textAlign: n.attrs.textAlign as CSSProperties["textAlign"] } : undefined }, tag === "table" ? <tbody>{children}</tbody> : tag === "hr" || tag === "br" ? undefined : children);
+    if (n.type === "table") return <GazetteTableFrame key={key} attrs={n.attrs}><table><tbody>{children}</tbody></table></GazetteTableFrame>;
+    return createElement(tag, { key, ...(tag === "td" || tag === "th" ? { colSpan: n.attrs?.colspan, rowSpan: n.attrs?.rowspan } : {}), style: n.attrs?.textAlign ? { textAlign: n.attrs.textAlign as CSSProperties["textAlign"] } : undefined }, tag === "hr" || tag === "br" ? undefined : children);
   }
   return <div className="gazette-prose">{doc?.content?.map(render)}</div>;
 }

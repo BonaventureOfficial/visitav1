@@ -177,3 +177,10 @@
 .gazette-image-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 8px 0; color: var(--foreground); }
 .gazette-title-input { color: var(--gazette-ink); border-radius: 0; }
 .gazette-title-input::placeholder { color: var(--gazette-ink); opacity: 0.6; }
+.gazette-table-placement { position: relative; max-width: 100%; margin-top: 1em; margin-bottom: 1em; }
+.gazette-table-frame { position: relative; width: 100%; }
+.gazette-table-rotated { position: absolute; left: 50%; top: 50%; width: 100%; transform-origin: center; }
+.gazette-table-measure { width: 100%; }
+.gazette-prose .gazette-table-placement table { margin: 0; }
+.gazette-table-controls { display: flex; justify-content: center; gap: 4px; padding: 8px 0; color: var(--foreground); }
+.gazette-table-node { min-width: 0; }
