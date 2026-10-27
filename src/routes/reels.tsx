@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatCount } from "@/lib/format";
 import { fetchFeedPage, fetchCreatorMeta } from "@/lib/feed";
 import type { FeedCursor, CreatorMeta } from "@/lib/feed";
+import { usePlayer } from "@/lib/player";
 import { track, trackImpression } from "@/lib/track";
 import { toast } from "sonner";
 
