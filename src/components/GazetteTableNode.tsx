@@ -68,7 +68,7 @@ function TableNode({ node, editor, getPos, updateAttributes, deleteNode }: NodeV
         {([["move", Move, fr ? "Déplacer le tableau" : "Move table"], ["resize", Maximize2, fr ? "Redimensionner le tableau" : "Resize table"], ["rotate", RotateCw, fr ? "Tourner le tableau" : "Rotate table"]] as const).map(([mode, Icon, label]) => <Button key={mode} type="button" variant="secondary" size="icon" title={label} aria-label={label} className="gazette-image-touch" {...handlers(mode)}><Icon /></Button>)}
         <Button type="button" variant="secondary" size="icon" title={fr ? "Supprimer le tableau" : "Delete table"} aria-label={fr ? "Supprimer ce tableau" : "Delete this table"} onClick={deleteNode}><Trash2 /></Button>
       </div>}
-      <GazetteTableFrame attrs={node.attrs}><NodeViewContent as="table" /></GazetteTableFrame>
+      <GazetteTableFrame attrs={node.attrs}><NodeViewContent<"table"> as="table" /></GazetteTableFrame>
     </div>
   </NodeViewWrapper>;
 }
