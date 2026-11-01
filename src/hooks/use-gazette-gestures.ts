@@ -10,6 +10,7 @@ export function useGazetteGestures({ node, editor, getPos, updateAttributes }: P
   const [dragY, setDragY] = useState(0);
   const shift = useRef(0);
   const active = useRef(false);
+  const dropY = useRef(0);
   const start = useRef({ ...imageLayout(node.attrs), x: 0, y: 0, distance: 0, angle: 0, paperWidth: 300, baseY: 0, mode: "move" as Mode });
   function reset(point: GesturePoint, mode: Mode) {
     const pair = gesturePair([...points.current.values()]);
@@ -35,6 +36,7 @@ export function useGazetteGestures({ node, editor, getPos, updateAttributes }: P
     e.preventDefault(); e.stopPropagation();
     const initial = start.current, pair = gesturePair([...points.current.values()]);
     const point = pair ?? { x: e.clientX, y: e.clientY };
+    dropY.current = point.y;
     const dx = point.x - initial.x;
     if (pair && initial.distance > 0) updateAttributes(gestureLayout(initial, initial.paperWidth, dx, pair.distance / initial.distance, pair.angle - initial.angle));
     else if (initial.mode === "resize") updateAttributes(imageLayout({ ...initial, width: initial.width + dx / initial.paperWidth * 100 }));
@@ -54,14 +56,13 @@ export function useGazetteGestures({ node, editor, getPos, updateAttributes }: P
       const from = getPos();
       // Find a top-level drop boundary using unshifted blocks, not transformed cells.
       if (typeof from === "number") {
-        let to = dy > 0 ? editor.state.doc.content.size : 0;
+        let to = 0;
         editor.state.doc.forEach((block, pos) => {
           if (pos === from) return;
           const dom = editor.view.nodeDOM(pos);
           if (!(dom instanceof HTMLElement)) return;
           const rect = dom.getBoundingClientRect();
-          if (e.clientY >= rect.top + rect.height / 2) to = pos + block.nodeSize;
-          else if (to === editor.state.doc.content.size) to = pos;
+          if (dropY.current >= rect.top + rect.height / 2) to = pos + block.nodeSize;
         });
         const current = editor.state.doc.nodeAt(from);
         if (current && (to < from || to > from + current.nodeSize)) {
