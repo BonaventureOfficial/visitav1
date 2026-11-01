@@ -184,3 +184,4 @@
 .gazette-prose .gazette-table-placement table { margin: 0; }
 .gazette-table-controls { display: flex; justify-content: center; gap: 4px; padding: 8px 0; color: var(--foreground); }
 .gazette-table-node { min-width: 0; }
+.gazette-table-touch { touch-action: none; }
