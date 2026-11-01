@@ -1,5 +1,5 @@
 # Tasks
-- [ ] Add touch table placement, resizing and rotation; correct row/column input and verify editing and persisted geometry.
+- [x] Add touch table placement, resizing and rotation; correct row/column input. Exact 10×6 insertion, empty drafts, editable cells, two-finger pinch/rotation, horizontal placement and safe preview verified; 11 tests pass. Real signed-in publication remains blocked below.
 - [x] Add touch image placement, resizing, rotation, replacement/deletion and creator-chosen gazette titles; deliver complete GitHub source files. Mobile gestures and mocked replacement/preview verified; real signed-in publishing remains blocked below.
 - [x] Add a rich gazette editor with colors, typography, tables and uploaded images.
 - [x] Display text/photo gazette panels between Home videos, preserving pagination and deletion confirmation.
