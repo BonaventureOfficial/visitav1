@@ -1,5 +1,5 @@
 # Tasks
-- [ ] Enable direct two-finger photo/table scaling, rotation and horizontal/vertical dragging; verify touch gestures and editable cells.
+- [x] Enable direct two-finger photo/table scaling, rotation and horizontal/vertical dragging; verified in the signed-in publishing editor using real touch events, editable cells, preview and 14 passing tests; no test publication submitted.
 - [x] Add touch table placement, resizing and rotation; correct row/column input. Exact 10×6 insertion, empty drafts, editable cells, two-finger pinch/rotation, horizontal placement and safe preview verified; 11 tests pass. Real signed-in publication remains blocked below.
 - [x] Add touch image placement, resizing, rotation, replacement/deletion and creator-chosen gazette titles; deliver complete GitHub source files. Mobile gestures and mocked replacement/preview verified; real signed-in publishing remains blocked below.
 - [x] Add a rich gazette editor with colors, typography, tables and uploaded images.
