@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { Home, Plus, User, Clapperboard } from "lucide-react";
+import { Home, Plus, User, Clapperboard, Newspaper } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,9 +19,10 @@ export function BottomNav() {
       .then(({ data }) => setMyAvatar((data?.avatar_url as string | null) ?? null));
   }, [user, avatar]);
 
-  const items: Array<{ to: "/" | "/reels" | "/upload" | "/profile"; label: string; icon: typeof Home; primary?: boolean }> = [
+  const items: Array<{ to: "/" | "/reels" | "/gazeta" | "/upload" | "/profile"; label: string; icon: typeof Home; primary?: boolean }> = [
     { to: "/", label: t("home"), icon: Home },
     { to: "/reels", label: t("reels"), icon: Clapperboard },
+    { to: "/gazeta", label: "Gazeta", icon: Newspaper },
     { to: "/upload", label: t("upload"), icon: Plus, primary: true },
     { to: "/profile", label: t("profile"), icon: User },
   ];
@@ -31,7 +32,7 @@ export function BottomNav() {
       className="fixed bottom-0 inset-x-0 z-50 glass border-t border-border/40"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <ul className="mx-auto max-w-7xl grid grid-cols-4 h-16">
+      <ul className="mx-auto max-w-7xl grid grid-cols-5 h-16">
         {items.map(({ to, label, icon: Icon, primary }) => {
           const active = pathname === to;
           const isProfile = to === "/profile";
