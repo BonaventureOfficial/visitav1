@@ -21,7 +21,7 @@ export function BottomNav() {
 
   const items: Array<{ to: "/" | "/reels" | "/gazeta" | "/upload" | "/profile"; label: string; icon: typeof Home; primary?: boolean }> = [
     { to: "/", label: t("home"), icon: Home },
-    { to: "/reels", label: t("reels"), icon: Clapperboard, Newspaper },
+    { to: "/reels", label: t("reels"), icon: Clapperboard },
     { to: "/gazeta", label: "Gazeta", icon: Newspaper },
     { to: "/upload", label: t("upload"), icon: Plus, primary: true },
     { to: "/profile", label: t("profile"), icon: User },
