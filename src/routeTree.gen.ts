@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as GazetaRouteImport } from './routes/gazeta'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ReelsRouteImport } from './routes/reels'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -30,6 +31,11 @@ const AdminRoute = AdminRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GazetaRoute = GazetaRouteImport.update({
+  id: '/gazeta',
+  path: '/gazeta',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/gazeta': typeof GazetaRoute
   '/profile': typeof ProfileRoute
   '/reels': typeof ReelsRoute
   '/settings': typeof SettingsRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/gazeta': typeof GazetaRoute
   '/profile': typeof ProfileRoute
   '/reels': typeof ReelsRoute
   '/settings': typeof SettingsRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/gazeta': typeof GazetaRoute
   '/profile': typeof ProfileRoute
   '/reels': typeof ReelsRoute
   '/settings': typeof SettingsRoute
@@ -84,14 +93,30 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/admin' | '/auth' | '/profile' | '/reels' | '/settings' | '/upload'
+    | '/'
+    | '/admin'
+    | '/auth'
+    | '/gazeta'
+    | '/profile'
+    | '/reels'
+    | '/settings'
+    | '/upload'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/auth' | '/profile' | '/reels' | '/settings' | '/upload'
+  to:
+    | '/'
+    | '/admin'
+    | '/auth'
+    | '/gazeta'
+    | '/profile'
+    | '/reels'
+    | '/settings'
+    | '/upload'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/auth'
+    | '/gazeta'
     | '/profile'
     | '/reels'
     | '/settings'
@@ -102,6 +127,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
+  GazetaRoute: typeof GazetaRoute
   ProfileRoute: typeof ProfileRoute
   ReelsRoute: typeof ReelsRoute
   SettingsRoute: typeof SettingsRoute
@@ -129,6 +155,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gazeta': {
+      id: '/gazeta'
+      path: '/gazeta'
+      fullPath: '/gazeta'
+      preLoaderRoute: typeof GazetaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -166,6 +199,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
+  GazetaRoute: GazetaRoute,
   ProfileRoute: ProfileRoute,
   ReelsRoute: ReelsRoute,
   SettingsRoute: SettingsRoute,
