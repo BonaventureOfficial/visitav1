@@ -29,6 +29,13 @@
       "when": 1792802121698,
       "tag": "0003_gazette_rich_publications",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793618938188,
+      "tag": "0004_post_interactions",
+      "breakpoints": true
     }
   ]
 }

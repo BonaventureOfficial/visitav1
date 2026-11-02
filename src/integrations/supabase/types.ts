@@ -127,36 +127,180 @@ export type Database = {
         }
         Relationships: []
       }
-      posts: {
+      post_comments: {
         Row: {
           body: string
           created_at: string
           id: string
-          kind: string
-          paper_theme: string
-          photo_path: string | null
-          rich_content: Json | null
+          parent_id: string | null
+          post_id: string
           user_id: string
         }
         Insert: {
-          body?: string
+          body: string
           created_at?: string
           id?: string
-          kind: string
-          paper_theme?: string
-          photo_path?: string | null
-          rich_content?: Json | null
+          parent_id?: string | null
+          post_id: string
           user_id: string
         }
         Update: {
           body?: string
           created_at?: string
           id?: string
-          kind?: string
+          parent_id?: string | null
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "post_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_likes: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_reposts: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_reposts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_views: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+          view_date: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+          view_date?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+          view_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_views_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posts: {
+        Row: {
+          body: string
+          comments_count: number
+          created_at: string
+          id: string
+          kind: string
+          likes_count: number
+          paper_theme: string
+          photo_path: string | null
+          reposts_count: number
+          rich_content: Json | null
+          user_id: string
+          views_count: number
+        }
+        Insert: {
+          body?: string
+          comments_count?: number
+          created_at?: string
+          id?: string
+          kind: string
+          likes_count?: number
           paper_theme?: string
           photo_path?: string | null
+          reposts_count?: number
+          rich_content?: Json | null
+          user_id: string
+          views_count?: number
+        }
+        Update: {
+          body?: string
+          comments_count?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          likes_count?: number
+          paper_theme?: string
+          photo_path?: string | null
+          reposts_count?: number
           rich_content?: Json | null
           user_id?: string
+          views_count?: number
         }
         Relationships: [
           {
@@ -750,6 +894,10 @@ export type Database = {
       recompute_ranking: {
         Args: { _full?: boolean; _window?: string }
         Returns: undefined
+      }
+      record_post_view: {
+        Args: { _post_id: string; _seconds: number }
+        Returns: boolean
       }
       record_video_event: {
         Args: {
