@@ -4,11 +4,11 @@ import { cleanGazette, gazettePaths, gazetteTitle, type GazetteNode, type PaperT
 
 export type PostKind = "text" | "photo";
 export type PostCursor = { created_at: string; id: string };
-export type Publication = { id: string; user_id: string; kind: string; body: string; photo_path: string | null; created_at: string; photo_url?: string; channel_name?: string; avatar_url?: string | null; rich_content?: GazetteNode | null; paper_theme?: string; inline_images?: Record<string, string> };
+export type Publication = { id: string; user_id: string; kind: string; body: string; photo_path: string | null; created_at: string; photo_url?: string; channel_name?: string; avatar_url?: string | null; rich_content?: GazetteNode | null; paper_theme?: string; likes_count?: number; views_count?: number; comments_count?: number; reposts_count?: number; inline_images?: Record<string, string> };
 export const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export async function fetchPosts(ownerId?: string, cursor?: PostCursor | null) {
-  let query = supabase.from("posts").select("id,user_id,kind,body,photo_path,created_at,rich_content,paper_theme").order("created_at", { ascending: false }).order("id", { ascending: false }).limit(12);
+  let query = supabase.from("posts").select("id,user_id,kind,body,photo_path,created_at,rich_content,paper_theme,likes_count,views_count,comments_count,reposts_count").order("created_at", { ascending: false }).order("id", { ascending: false }).limit(12);
   if (ownerId) query = query.eq("user_id", ownerId);
   if (cursor) query = query.or(`created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`);
   const { data, error } = await query;

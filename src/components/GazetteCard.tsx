@@ -6,6 +6,7 @@ import { GazetteContent } from "@/components/GazetteContent";
 import { gazetteTitle } from "@/lib/gazette";
 import type { Publication } from "@/lib/posts";
 import { useI18n } from "@/lib/i18n";
+import { PostInteractions } from "@/components/PostInteractions";
 
 export function GazetteCard({ post, action }: { post: Publication; action?: React.ReactNode }) {
   const [expanded, setExpanded] = useState(false);
@@ -29,5 +30,6 @@ export function GazetteCard({ post, action }: { post: Publication; action?: Reac
     <footer className="mt-4 flex items-center justify-between border-t-2 border-current pt-2">
       <Button variant="ghost" size="sm" className="text-inherit hover:bg-current/10" onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>{expanded ? <ArrowUpRight /> : <ArrowDownRight />}{expanded ? (fr ? "Refermer" : "Close") : (fr ? "Lire la gazette" : "Read the gazette")}</Button>{action}
     </footer>
+    <PostInteractions post={post} trackView={expanded} />
   </article>;
 }

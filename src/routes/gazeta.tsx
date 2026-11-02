@@ -6,6 +6,7 @@ import { GazetteContent } from "@/components/GazetteContent";
 import { usePublications } from "@/hooks/use-publications";
 import { gazetteTitle, type GazetteNode } from "@/lib/gazette";
 import type { Publication } from "@/lib/posts";
+import { PostInteractions } from "@/components/PostInteractions";
 import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/gazeta")({
@@ -96,6 +97,7 @@ function GazetaPage() {
         <p className="mb-4 mt-2 border-b border-current/20 pb-3 font-sans text-xs uppercase tracking-widest">{open.channel_name} · {date(open.created_at)}</p>
         {open.photo_url && <img src={open.photo_url} alt={open.body || ""} className="mb-4 w-full object-contain" />}
         {open.rich_content ? <GazetteContent document={open.rich_content} images={open.inline_images} /> : <p className="gazette-plain whitespace-pre-wrap break-words">{open.body}</p>}
+        <PostInteractions key={open.id} post={open} trackView />
       </article>
     </div>}
   </main>;
