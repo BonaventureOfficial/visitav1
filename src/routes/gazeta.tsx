@@ -64,24 +64,32 @@ function GazetaPage() {
       {filters.map(([k, l]) => <Button key={k} size="sm" variant={filter === k ? "default" : "outline"} className="shrink-0 rounded-full font-sans" onClick={() => setFilter(k)}>{l}</Button>)}
     </nav>
 
-    {lead && <button onClick={() => setOpen(lead)} className="grid w-full gap-6 border-b border-border py-6 text-left md:grid-cols-[3fr_2fr]" style={{ fontFamily: "Georgia, serif" }}>
-      <div>
-        <p className="mb-2 font-sans text-xs font-bold uppercase tracking-widest text-primary">{fr ? "La Une" : "Lead story"}</p>
-        <h2 className="text-3xl font-black leading-tight sm:text-5xl">{title(lead)}</h2>
-        <div className="mt-3">{meta(lead)}</div>
-        <p className="mt-4 line-clamp-6 text-lg leading-relaxed first-letter:float-left first-letter:mr-2 first-letter:text-6xl first-letter:font-black first-letter:leading-none first-letter:text-primary md:columns-2 md:gap-6">{textOf(lead) || "…"}</p>
-      </div>
-      {(lead.photo_url || Object.values(lead.inline_images ?? {})[0]) && <img src={lead.photo_url ?? Object.values(lead.inline_images ?? {})[0]} alt="" className="max-h-96 w-full object-cover" />}
-    </button>}
+    {lead && <article className="border-b border-border py-6" style={{ fontFamily: "Georgia, serif" }}>
+      <button onClick={() => setOpen(lead)} aria-label={fr ? "Ouvrir la Une" : "Open the lead story"} className="grid w-full gap-6 text-left md:grid-cols-[3fr_2fr]">
+        <div>
+          <p className="mb-2 font-sans text-xs font-bold uppercase tracking-widest text-primary">{fr ? "La Une" : "Lead story"}</p>
+          <h2 className="text-3xl font-black leading-tight sm:text-5xl">{title(lead)}</h2>
+          <div className="mt-3">{meta(lead)}</div>
+          <p className="mt-4 line-clamp-6 text-lg leading-relaxed first-letter:float-left first-letter:mr-2 first-letter:text-6xl first-letter:font-black first-letter:leading-none first-letter:text-primary md:columns-2 md:gap-6">{textOf(lead) || "…"}</p>
+        </div>
+        {(lead.photo_url || Object.values(lead.inline_images ?? {})[0]) && <img src={lead.photo_url ?? Object.values(lead.inline_images ?? {})[0]} alt="" className="max-h-96 w-full object-cover" />}
+      </button>
+      <PostInteractions post={lead} />
+    </article>}
+
 
     <section className="grid gap-x-6 sm:grid-cols-2 lg:grid-cols-3" style={{ fontFamily: "Georgia, serif" }}>
-      {rest.map((p) => { const img = p.photo_url ?? Object.values(p.inline_images ?? {})[0]; return <button key={p.id} onClick={() => setOpen(p)} className="border-b border-border py-5 text-left sm:[&:not(:nth-child(2n))]:border-r sm:pr-6 lg:[&]:border-r-0">
-        {img && <img src={img} alt="" loading="lazy" className="mb-3 aspect-[4/3] w-full object-cover" />}
-        <h3 className="text-xl font-bold leading-snug">{title(p)}</h3>
-        <div className="my-2">{meta(p)}</div>
-        <p className="line-clamp-4 text-sm leading-relaxed text-muted-foreground first-letter:text-2xl first-letter:font-bold first-letter:text-foreground">{textOf(p)}</p>
-      </button>; })}
+      {rest.map((p) => { const img = p.photo_url ?? Object.values(p.inline_images ?? {})[0]; return <article key={p.id} className="border-b border-border py-5 sm:[&:not(:nth-child(2n))]:border-r sm:pr-6 lg:[&]:border-r-0">
+        <button onClick={() => setOpen(p)} aria-label={fr ? "Ouvrir l'article" : "Open the article"} className="block w-full text-left">
+          {img && <img src={img} alt="" loading="lazy" className="mb-3 aspect-[4/3] w-full object-cover" />}
+          <h3 className="text-xl font-bold leading-snug">{title(p)}</h3>
+          <div className="my-2">{meta(p)}</div>
+          <p className="line-clamp-4 text-sm leading-relaxed text-muted-foreground first-letter:text-2xl first-letter:font-bold first-letter:text-foreground">{textOf(p)}</p>
+        </button>
+        <PostInteractions post={p} />
+      </article>; })}
     </section>
+
 
     {busy && <Loader2 className="mx-auto my-6 h-6 w-6 animate-spin text-primary" />}
     {!busy && !error && !list.length && <p className="py-12 text-center text-muted-foreground"><Newspaper className="mx-auto mb-2 h-8 w-8" />{fr ? "Aucune gazette dans cette rubrique." : "No gazette in this section."}</p>}
